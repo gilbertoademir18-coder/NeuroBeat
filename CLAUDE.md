@@ -6,6 +6,13 @@
 - Use linguagem natural, como um colega de equipe.
 - Seja proativo ao sugerir melhorias.
 
+# ⚠️ Pendente: migração para o `overdrive`
+
+Se esta sessão está no **PC de casa (`overdrive`)** e o NeuroBeat ainda não
+roda aqui, siga `docs/migracao-para-o-overdrive.md` antes de qualquer outra
+coisa. Ele leva banco, servidor, tray e tailnet do notebook para cá. (Remova
+este aviso quando a migração estiver feita.)
+
 # Como trabalhar neste projeto
 
 - **Toda decisão de projeto vai para este arquivo.** Se combinamos algo na
