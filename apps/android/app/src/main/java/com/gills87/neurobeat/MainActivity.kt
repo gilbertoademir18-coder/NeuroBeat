@@ -233,14 +233,15 @@ private fun App(controller: MediaController?) {
             // compostas por baixo: ao voltar, a busca e a rolagem estão onde estavam.
             // Como a página é transparente (para a capa aparecer), as abas ficam
             // invisíveis enquanto ela está aberta.
+            // As abas ficam sempre à mostra, também com a página aberta; tocar
+            // numa aba (mesmo a atual) fecha a página e volta para a lista dela.
+            TabRow(selectedTabIndex = aba, containerColor = Color.Transparent) {
+                listOf("Playlists", "Pastas", "Busca").forEachIndexed { i, nome ->
+                    Tab(selected = aba == i, onClick = { aba = i; aberta = null }, text = { Text(nome) })
+                }
+            }
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize().alpha(if (aberta == null) 1f else 0f)) {
-                    TabRow(selectedTabIndex = aba, containerColor = Color.Transparent) {
-                        Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Playlists") })
-                        Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Pastas") })
-                        Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Busca") })
-                    }
-
                     val lista = arquivos
                     if (lista == null) {
                         Text(progresso.ifEmpty { "Lendo as músicas do aparelho…" }, Modifier.padding(16.dp))
