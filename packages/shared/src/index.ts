@@ -105,6 +105,38 @@ export interface ItensDaPlaylist {
   musicaIds: number[];
 }
 
+/* -------------------------------------------------------------------------
+ * Sincronização com o app Android
+ *
+ * Um pacote só, com tudo o que o celular precisa para tocar offline. O app
+ * guarda a última cópia e casa cada música com um arquivo local pela
+ * `impressao` (nunca pelo caminho). Espelhado à mão em
+ * `apps/android/.../Sync.kt`: mudou aqui, muda lá.
+ * ---------------------------------------------------------------------- */
+
+/** `GET /api/sync` */
+export interface SyncDto {
+  /** Versão do formato. Sobe quando um campo muda de sentido. */
+  versao: 1;
+  geradoEm: string;
+  musicas: {
+    id: number;
+    impressao: string;
+    titulo: string;
+    artista: string | null;
+    duracaoMs: number | null;
+    /** Só para mostrar ("musicas/3 Doors Down/Changes.mp3"). */
+    caminho: string;
+  }[];
+  playlists: {
+    id: number;
+    nome: string;
+    loop: boolean;
+    /** Na ordem de tocar; pode repetir. */
+    musicaIds: number[];
+  }[];
+}
+
 /** `POST /api/biblioteca/escanear` */
 export interface ResultadoEscaneamento {
   raizes: { alias: string; arquivos: number; erro?: string }[];
