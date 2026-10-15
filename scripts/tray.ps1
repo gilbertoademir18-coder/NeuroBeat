@@ -140,8 +140,8 @@ function E-O-NeuroBeat {
 <#
     O endereço HTTPS do app no tailnet, ou $null sem Tailscale.
 
-    É por ele que o celular chega — e precisa ser HTTPS: fora do localhost, o
-    navegador só instala PWA e registra service worker em origem segura.
+    É por ele que o app Android sincroniza e que o web abre de outro aparelho.
+    Precisa ser HTTPS: o Android bloqueia HTTP sem criptografia nos apps.
 #>
 function Url-Tailnet {
     try {
@@ -389,6 +389,8 @@ $itemCelular = $menu.Items.Add("Copiar link do tailnet")
 $itemCode = $menu.Items.Add("Abrir no VS Code")
 $itemPasta = $menu.Items.Add("Abrir a pasta do projeto")
 $menu.Items.Add("-") | Out-Null
+$itemEscanear = $menu.Items.Add("Reescanear biblioteca")
+$menu.Items.Add("-") | Out-Null
 $itemPublicar = $menu.Items.Add("Publicar a versão nova")
 $itemReiniciar = $menu.Items.Add("Reiniciar o servidor")
 $menu.Items.Add("-") | Out-Null
@@ -407,11 +409,20 @@ $script:publicando = $null
 # Liga quando o reinício veio de uma publicação, para avisar quando subir.
 $script:avisarPublicado = $false
 
-<# Reiniciar e publicar não fazem sentido no meio de outro dos dois. #>
+# O processo do escanear.ps1 enquanto ele roda; o relógio espera ele sair.
+$script:escaneando = $null
+$RESUMO_ESCANEAMENTO = Join-Path $PASTA_LOG "escaneamento.txt"
+
+<#
+    Reiniciar e publicar não fazem sentido no meio de outro dos dois.
+    Reescanear precisa do servidor no ar, e um de cada vez.
+#>
 function Atualizar-Itens {
     $livre = ($script:estado -ne "subindo") -and -not $script:publicando
     $itemReiniciar.Enabled = $livre
     $itemPublicar.Enabled  = $livre
+    $itemEscanear.Enabled  = ($script:estado -eq "no-ar") -and -not $script:escaneando
+    $itemEscanear.Text     = if ($script:escaneando) { "Reescaneando..." } else { "Reescanear biblioteca" }
 }
 
 <# O único lugar que muda estado, dica e ícone juntos. #>
@@ -468,7 +479,7 @@ $itemCelular.add_Click({
         return
     }
     [System.Windows.Forms.Clipboard]::SetText($link)
-    Avisar "Copiado: $link`nAbra no celular e use 'Adicionar à tela inicial'." "Info"
+    Avisar "Copiado: $link" "Info"
 })
 
 $itemCode.add_Click({
@@ -499,6 +510,26 @@ $itemPublicar.add_Click({
     # No PowerShell 5.1 o ExitCode só fica legível se o handle foi aberto
     # enquanto o processo vivia; pedir o Handle agora garante isso.
     $null = $script:publicando.Handle
+    Atualizar-Itens
+})
+
+<#
+    Reescanear sem travar o menu: o primeiro escaneamento leva perto de um
+    minuto, e uma chamada HTTP aqui congelaria a bandeja esse tempo todo. O
+    escanear.ps1 roda num processo sem janela; o relógio vê quando ele sai e
+    mostra o resumo que ele deixou no arquivo.
+#>
+$itemEscanear.add_Click({
+    Remove-Item $RESUMO_ESCANEAMENTO -ErrorAction SilentlyContinue
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName         = Join-Path $PSHOME "powershell.exe"
+    $psi.Arguments        = "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $RAIZ 'scripts\escanear.ps1')`" -Porta $PORTA -Saida `"$RESUMO_ESCANEAMENTO`""
+    $psi.WorkingDirectory = $RAIZ
+    $psi.UseShellExecute  = $false
+    $psi.CreateNoWindow   = $true
+    $script:escaneando = [System.Diagnostics.Process]::Start($psi)
+    # Ver o comentário do publicar: sem pedir o Handle agora, o ExitCode some.
+    $null = $script:escaneando.Handle
     Atualizar-Itens
 })
 
@@ -553,6 +584,15 @@ $itemSair.add_Click({
 $relogio = New-Object System.Windows.Forms.Timer
 $relogio.Interval = 1000
 $relogio.add_Tick({
+    if ($script:escaneando -and $script:escaneando.HasExited) {
+        $codigo = $script:escaneando.ExitCode
+        $script:escaneando = $null
+        Atualizar-Itens
+        $resumo = if (Test-Path $RESUMO_ESCANEAMENTO) { (Get-Content $RESUMO_ESCANEAMENTO -Raw -Encoding UTF8).Trim() } else { "O escaneamento terminou sem resumo." }
+        # O balão é a resposta de uma ação pedida: aparece no sucesso também.
+        Avisar $resumo $(if ($codigo -eq 0) { "Info" } else { "Warning" })
+    }
+
     if ($script:publicando -and $script:publicando.HasExited) {
         $codigo = $script:publicando.ExitCode
         $script:publicando = $null
