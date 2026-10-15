@@ -260,18 +260,23 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   Não tem nada a ver com a permissão de sobrepor apps.
 - **Mais tocadas (aba Top):** o `PlaybackService` conta uma tocada quando a
   faixa passa de 30 s (ou da metade, se for curta); cada volta do loop conta
-  de novo. A conta é por impressão digital e fica **só no celular**
-  (`tocadas.json`, `Tocadas.kt`): o celular não escreve no servidor. Se um
-  dia o web precisar mostrar isso, é uma rota nova de envio, a decidir.
-  Desinstalar o app zera a conta.
+  de novo. **Fica no banco** (tabela `tocadas`, um registro por tocada, pela
+  impressão digital), para não se perder ao desinstalar o app. No celular,
+  cada tocada vira um evento com UUID numa fila (`tocadas-pendentes.json`,
+  `Tocadas.kt`), enviada por `POST /api/tocadas` logo depois de contar e
+  antes de cada sync; sai da fila só com a confirmação, e o UUID impede contar
+  em dobro um envio repetido. O `GET /api/sync` devolve o total por
+  impressão (`tocadas`), e a aba Top soma esse total com a fila. Decidido pelo
+  usuário em 2026-10-15.
 - **Capa de fundo:** a capa embutida no arquivo da faixa atual
   (`MediaMetadataRetriever.embeddedPicture`, lida no celular, sem passar pelo
   servidor) fica borrada atrás de tudo, com um véu da cor de fundo, e em
   miniatura na barra do player. Sem capa, fundo liso. `Capa.kt`.
 - Faixa da playlist sem arquivo no aparelho é pulada, e a lista mostra
   quantas faltam.
-- **Quem edita é o web.** O celular só lê, e por isso não há conflitos de
-  sincronização.
+- **Quem edita é o web.** O celular só lê a biblioteca e as playlists, e por
+  isso não há conflitos de sincronização. A única escrita do celular são as
+  tocadas, que só acrescentam registros.
 - Playlist: nome, itens ordenados e `loop`. Com o loop ligado, o player usa
   `REPEAT_MODE_ALL`. Shuffle fica para depois.
 

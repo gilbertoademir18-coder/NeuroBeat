@@ -1,41 +1,85 @@
 package com.gills87.neurobeat
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
+import java.util.UUID
 
 /**
- * Quantas vezes cada música foi tocada, por impressão digital (a mesma
- * identidade das playlists: renomear ou mover o arquivo não zera a conta).
+ * As tocadas que ainda não chegaram ao servidor.
  *
- * Fica só no aparelho (`tocadas.json`): o celular não escreve no servidor.
- * Quem conta é o `PlaybackService`, depois de 30 s ouvindo (ou metade da
- * faixa, se ela for curta).
+ * Quem conta é o `PlaybackService` (depois de 30 s ouvindo, ou metade da faixa
+ * se for curta). Cada tocada vira um evento com id próprio numa fila
+ * (`tocadas-pendentes.json`), que o `Sync.enviarTocadas` manda para o banco e
+ * esvazia só depois da confirmação. O total de cada música é o do servidor
+ * (no pacote do sync) mais o que ainda está aqui na fila.
  */
 object Tocadas {
-    data class Registro(val vezes: Int, val ultimaEm: Long)
+    data class Pendente(val id: String, val impressao: String, val tocadaEm: String)
 
-    private fun arquivo(context: Context) = File(context.filesDir, "tocadas.json")
-
-    @Synchronized
-    fun ler(context: Context): Map<String, Registro> = runCatching {
-        val json = JSONObject(arquivo(context).readText())
-        json.keys().asSequence().associateWith { chave ->
-            val o = json.getJSONObject(chave)
-            Registro(o.getInt("n"), o.getLong("u"))
-        }
-    }.getOrDefault(emptyMap())
+    private fun arquivo(context: Context) = File(context.filesDir, "tocadas-pendentes.json")
 
     @Synchronized
-    fun contar(context: Context, impressao: String) {
-        val todos = ler(context).toMutableMap()
-        todos[impressao] = Registro((todos[impressao]?.vezes ?: 0) + 1, System.currentTimeMillis())
-        val json = JSONObject()
-        todos.forEach { (chave, r) -> json.put(chave, JSONObject().put("n", r.vezes).put("u", r.ultimaEm)) }
-        // Grava num temporário e troca: um processo morto no meio não corrompe a contagem.
+    fun pendentes(context: Context): List<Pendente> {
+        migrarContagemAntiga(context)
+        return runCatching {
+            val a = JSONArray(arquivo(context).readText())
+            (0 until a.length()).map { i ->
+                val o = a.getJSONObject(i)
+                Pendente(o.getString("id"), o.getString("impressao"), o.getString("tocadaEm"))
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    @Synchronized
+    fun registrar(context: Context, impressao: String) =
+        gravar(context, pendentes(context) + Pendente(UUID.randomUUID().toString(), impressao, Instant.now().toString()))
+
+    /** Tira da fila as que o servidor confirmou. As que chegaram depois do envio ficam. */
+    @Synchronized
+    fun confirmar(context: Context, ids: Set<String>) = gravar(context, pendentes(context).filterNot { it.id in ids })
+
+    /** Total por impressão: o do servidor somado ao que ainda não foi enviado. */
+    fun totais(context: Context, doServidor: Map<String, Int>): Map<String, Int> {
+        val total = doServidor.toMutableMap()
+        pendentes(context).forEach { total[it.impressao] = (total[it.impressao] ?: 0) + 1 }
+        return total
+    }
+
+    private fun gravar(context: Context, lista: List<Pendente>) {
+        val a = JSONArray()
+        lista.forEach { a.put(JSONObject().put("id", it.id).put("impressao", it.impressao).put("tocadaEm", it.tocadaEm)) }
+        // Grava num temporário e troca: um processo morto no meio não corrompe a fila.
         val destino = arquivo(context)
         val temp = File(destino.path + ".tmp")
-        temp.writeText(json.toString())
+        temp.writeText(a.toString())
         temp.renameTo(destino)
+    }
+
+    /**
+     * A primeira versão guardava só o total por música (`tocadas.json`), sem
+     * servidor. Cada tocada contada lá vira um evento na fila, com a data da
+     * última vez, e o arquivo antigo sai.
+     */
+    private fun migrarContagemAntiga(context: Context) {
+        val antigo = File(context.filesDir, "tocadas.json")
+        if (!antigo.exists()) return
+        runCatching {
+            val json = JSONObject(antigo.readText())
+            val atuais = runCatching { arquivo(context).readText() }.getOrNull()?.let { JSONArray(it) } ?: JSONArray()
+            json.keys().forEach { impressao ->
+                val o = json.getJSONObject(impressao)
+                val quando = Instant.ofEpochMilli(o.getLong("u")).toString()
+                repeat(o.getInt("n")) {
+                    atuais.put(JSONObject().put("id", UUID.randomUUID().toString()).put("impressao", impressao).put("tocadaEm", quando))
+                }
+            }
+            val temp = File(arquivo(context).path + ".tmp")
+            temp.writeText(atuais.toString())
+            temp.renameTo(arquivo(context))
+        }
+        antigo.delete()
     }
 }

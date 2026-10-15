@@ -185,7 +185,12 @@ private fun App(controller: MediaController?) {
         sincronizando = true
         statusSync = "Sincronizando…"
         escopo.launch {
-            val resultado = withContext(Dispatchers.IO) { runCatching { Sync.baixar(context) } }
+            val resultado = withContext(Dispatchers.IO) {
+                // Manda as tocadas antes de baixar, para o pacote já vir com elas.
+                // Se falhar, elas ficam na fila e o download segue.
+                runCatching { Sync.enviarTocadas(context) }
+                runCatching { Sync.baixar(context) }
+            }
             sincronizando = false
             resultado.onSuccess {
                 pacote = it
@@ -265,7 +270,7 @@ private fun App(controller: MediaController?) {
                         0 -> Playlists(pacote, porImpressao, abrir)
                         1 -> Pastas(lista, abrir)
                         2 -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
-                        else -> MaisTocadas(porImpressao) { itens, origem -> tocar(controller, itens, loop = false, origem) }
+                        else -> MaisTocadas(porImpressao, pacote) { itens, origem -> tocar(controller, itens, loop = false, origem) }
                     }
                 }
                 aberta?.let { l ->
@@ -445,18 +450,19 @@ private fun Pastas(arquivos: List<ArquivoLocal>, abrir: (Lista) -> Unit) {
 }
 
 /**
- * As mais tocadas (contadas pelo `PlaybackService`, ver `Tocadas`). Relê o
- * arquivo cada vez que a aba abre. Música que saiu do aparelho some da lista,
- * mas a conta dela fica guardada.
+ * As mais tocadas: o total do servidor (no pacote do sync) mais o que ainda
+ * está na fila do aparelho (ver `Tocadas`). Recalcula cada vez que a aba abre
+ * ou chega um pacote novo. Música que não está no aparelho não aparece, mas a
+ * conta dela continua no banco.
  */
 @Composable
-private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, tocar: (List<MediaItem>, String) -> Unit) {
+private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, pacote: Pacote?, tocar: (List<MediaItem>, String) -> Unit) {
     val context = LocalContext.current
-    var ranking by remember { mutableStateOf<List<Pair<ArquivoLocal, Tocadas.Registro>>?>(null) }
-    LaunchedEffect(porImpressao) {
-        val contagem = withContext(Dispatchers.IO) { Tocadas.ler(context) }
-        ranking = contagem.mapNotNull { (impressao, r) -> porImpressao[impressao]?.let { it to r } }
-            .sortedWith(compareByDescending<Pair<ArquivoLocal, Tocadas.Registro>> { it.second.vezes }.thenByDescending { it.second.ultimaEm })
+    var ranking by remember { mutableStateOf<List<Pair<ArquivoLocal, Int>>?>(null) }
+    LaunchedEffect(porImpressao, pacote) {
+        val totais = withContext(Dispatchers.IO) { Tocadas.totais(context, pacote?.tocadas.orEmpty()) }
+        ranking = totais.mapNotNull { (impressao, vezes) -> porImpressao[impressao]?.let { it to vezes } }
+            .sortedWith(compareByDescending<Pair<ArquivoLocal, Int>> { it.second }.thenBy { it.first.nome.lowercase() })
             .take(100)
     }
     val lista = ranking ?: return
@@ -472,7 +478,7 @@ private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, tocar: (List<Me
         ) { Text("▶  Tocar as mais tocadas") }
         HorizontalDivider()
         LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(lista, key = { _, (a, _) -> a.id }) { i, (a, r) ->
+            itemsIndexed(lista, key = { _, (a, _) -> a.id }) { i, (a, vezes) ->
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -497,7 +503,7 @@ private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, tocar: (List<Me
                         )
                     }
                     Text(
-                        if (r.vezes == 1) "1 vez" else "${r.vezes} vezes",
+                        if (vezes == 1) "1 vez" else "$vezes vezes",
                         Modifier.padding(start = 12.dp),
                         style = MaterialTheme.typography.labelLarge,
                     )

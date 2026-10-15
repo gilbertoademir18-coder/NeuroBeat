@@ -1,6 +1,7 @@
 package com.gills87.neurobeat
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -22,7 +23,13 @@ data class MusicaSync(
 
 data class PlaylistSync(val id: Int, val nome: String, val loop: Boolean, val musicaIds: List<Int>)
 
-data class Pacote(val geradoEm: String, val musicas: Map<Int, MusicaSync>, val playlists: List<PlaylistSync>)
+data class Pacote(
+    val geradoEm: String,
+    val musicas: Map<Int, MusicaSync>,
+    val playlists: List<PlaylistSync>,
+    /** Tocadas já registradas no servidor, por impressão. */
+    val tocadas: Map<String, Int>,
+)
 
 object Sync {
     private const val VERSAO = 1
@@ -84,6 +91,38 @@ object Sync {
                 PlaylistSync(p.getInt("id"), p.getString("nome"), p.getBoolean("loop"), (0 until ids.length()).map(ids::getInt))
             }
         }
-        return Pacote(json.getString("geradoEm"), musicas.associateBy { it.id }, playlists)
+        // Campo acrescentado depois: uma cópia antiga guardada no aparelho não tem.
+        val tocadas = json.optJSONObject("tocadas")?.let { o -> o.keys().asSequence().associateWith { o.getInt(it) } }.orEmpty()
+        return Pacote(json.getString("geradoEm"), musicas.associateBy { it.id }, playlists, tocadas)
+    }
+
+    /**
+     * Manda as tocadas pendentes e só as tira da fila depois que o servidor
+     * confirma. Sem rede, elas esperam o próximo envio. Lança exceção em falha.
+     */
+    fun enviarTocadas(context: Context) {
+        val pendentes = Tocadas.pendentes(context)
+        if (pendentes.isEmpty()) return
+        val corpo = JSONObject().put(
+            "tocadas",
+            JSONArray().apply {
+                pendentes.forEach { put(JSONObject().put("id", it.id).put("impressao", it.impressao).put("tocadaEm", it.tocadaEm)) }
+            },
+        ).toString()
+        val conexao = (URL("$SERVIDOR/api/tocadas").openConnection() as HttpURLConnection).apply {
+            connectTimeout = 5_000
+            readTimeout = 20_000
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+        try {
+            conexao.outputStream.use { it.write(corpo.toByteArray()) }
+            val status = conexao.responseCode
+            if (status != 200) error("O servidor respondeu $status ao receber as tocadas.")
+            Tocadas.confirmar(context, pendentes.map { it.id }.toSet())
+        } finally {
+            conexao.disconnect()
+        }
     }
 }

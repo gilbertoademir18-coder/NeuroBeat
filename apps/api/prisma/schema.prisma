@@ -72,6 +72,21 @@ model Playlist {
   @@map("playlists")
 }
 
+/// Uma vez que uma música foi tocada no celular (depois de 30 s ouvindo).
+///
+/// Pela `impressao`, e não pelo id da música: é a identidade que o celular
+/// conhece, e a mesma música em dois caminhos conta junto. O `id` é gerado no
+/// celular, e é ele que impede contar duas vezes um envio repetido.
+model Tocada {
+  id         String   @id
+  impressao  String
+  tocadaEm   DateTime @map("tocada_em")
+  recebidaEm DateTime @default(now()) @map("recebida_em")
+
+  @@index([impressao])
+  @@map("tocadas")
+}
+
 /// Uma faixa numa playlist. A mesma música pode aparecer mais de uma vez.
 model PlaylistItem {
   id         Int      @id @default(autoincrement())

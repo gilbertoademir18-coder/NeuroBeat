@@ -63,7 +63,11 @@ class PlaybackService : MediaSessionService() {
                 val limite = if (duracao > 0) minOf(30_000L, duracao / 2) else 30_000L
                 if (p.currentPosition >= limite) {
                     jaContou = true
-                    gravador.execute { Tocadas.contar(this@PlaybackService, impressao) }
+                    gravador.execute {
+                        Tocadas.registrar(this@PlaybackService, impressao)
+                        // Sem rede, fica na fila para o próximo envio (este ou o do sync).
+                        runCatching { Sync.enviarTocadas(this@PlaybackService) }
+                    }
                 }
             }
             if (!jaContou) relogio.postDelayed(this, 2_000)

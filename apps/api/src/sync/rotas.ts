@@ -9,7 +9,7 @@ import { prisma } from "../lib/prisma.ts";
  */
 export async function rotasSync(app: FastifyInstance) {
   app.get("/", async (): Promise<SyncDto> => {
-    const [musicas, playlists] = await Promise.all([
+    const [musicas, playlists, tocadas] = await Promise.all([
       prisma.musica.findMany({
         include: { raiz: { select: { alias: true } } },
         orderBy: { id: "asc" },
@@ -18,6 +18,7 @@ export async function rotasSync(app: FastifyInstance) {
         orderBy: { nome: "asc" },
         include: { itens: { orderBy: { posicao: "asc" }, select: { musicaId: true } } },
       }),
+      prisma.tocada.groupBy({ by: ["impressao"], _count: { _all: true } }),
     ]);
     return {
       versao: 1,
@@ -36,6 +37,7 @@ export async function rotasSync(app: FastifyInstance) {
         loop: p.loop,
         musicaIds: p.itens.map((i) => i.musicaId),
       })),
+      tocadas: Object.fromEntries(tocadas.map((t) => [t.impressao, t._count._all])),
     };
   });
 }

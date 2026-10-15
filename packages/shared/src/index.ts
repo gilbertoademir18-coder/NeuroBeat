@@ -151,6 +151,28 @@ export interface SyncDto {
     /** Na ordem de tocar; pode repetir. */
     musicaIds: number[];
   }[];
+  /**
+   * Quantas vezes cada música já foi tocada, por impressão digital. Campo
+   * acrescentado depois: quem não conhece, ignora (por isso a versão não subiu).
+   */
+  tocadas: Record<string, number>;
+}
+
+/** `POST /api/tocadas`: as tocadas que o celular ainda não tinha enviado. */
+export interface EnvioDeTocadas {
+  tocadas: {
+    /** Gerado no celular (UUID). Reenviar o mesmo id não conta de novo. */
+    id: string;
+    impressao: string;
+    /** ISO 8601. */
+    tocadaEm: string;
+  }[];
+}
+
+/** Resposta de `POST /api/tocadas`. */
+export interface TocadasRecebidas {
+  /** Quantas eram novas (as repetidas não contam). */
+  recebidas: number;
 }
 
 /** `POST /api/biblioteca/escanear` */
