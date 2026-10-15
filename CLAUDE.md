@@ -45,7 +45,9 @@ autorizada, `npm run backup`.
 | `dev` (notebook do trabalho, `100.111.145.14`) | Desenvolvimento; usa o banco do `overdrive` pelo tailnet |
 | Moto G75 | App do player; fala com a API pelo tailnet só para sincronizar |
 
-Repositório: https://github.com/gilbertoademir18-coder/NeuroBeat
+Repositório: https://github.com/gilbertoademir18-coder/NeuroBeat, com o remote
+pelo alias SSH da conta pessoal (`git@github-gills87:...`, igual ao Creativa).
+Neste notebook, o `github.com` puro é a conta do trabalho e leva 403.
 
 ## Decisões
 
@@ -85,6 +87,46 @@ uma tarde.
 O build é feito nas **duas máquinas** (Android Studio + JDK no `overdrive` e no
 notebook), com o celular por USB.
 
+#### Toolchain do `apps/android`
+
+| Peça | Versão | Observação |
+| --- | --- | --- |
+| Gradle (wrapper) | 9.7.1 | `apps/android/gradlew.bat` |
+| Android Gradle Plugin | 9.4.1 | Kotlin embutido: **não** aplicar `org.jetbrains.kotlin.android` |
+| Kotlin / Compose compiler | 2.4.20 | plugin `org.jetbrains.kotlin.plugin.compose` |
+| Compose BOM | 2026.09.00 | exige `compileSdk = 37` |
+| Media3 | 1.11.1 | `media3-exoplayer` + `media3-session` |
+| JDK | 21 (o `jbr` do Android Studio, via `JAVA_HOME`) | |
+| SDK | `minSdk 33`, `targetSdk 36`, `compileSdk 37` | |
+
+O Moto G75 está no **Android 16**. Pacote do app: `com.gills87.neurobeat`.
+
+Ciclo de desenvolvimento, de dentro de `apps/android`:
+
+```powershell
+.\gradlew.bat assembleDebug
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+adb logcat -b crash -d        # se fechar sozinho
+```
+
+O MediaStore já indexa as pastas do Autosync: a contagem dele bate com a do
+disco (809 em Músicas, 142 em Audios, medido em 2026-10-15), com duração. O app
+não precisa varrer pastas; consulta o MediaStore por `RELATIVE_PATH`.
+
+#### Armadilhas já pisadas
+
+- **`future.get()` do `MediaController` pode estar cancelado.** Se a Activity
+  para antes de conectar (a tela apaga), o `onStop` cancela o future e o
+  `get()` lança `CancellationException`, derrubando o app. Conferir
+  `isCancelled` antes.
+- **A URI não atravessa do controller para a sessão.** Ela vai no
+  `requestMetadata.mediaUri` e o `onAddMediaItems` do `PlaybackService` a
+  repõe.
+- **Edge-to-edge (Android 15+):** o app desenha por trás das barras do
+  sistema. O `Scaffold` desconta os insets do conteúdo, mas **não** os da
+  `bottomBar`: ela precisa de `navigationBarsPadding()`, senão a barra de
+  navegação cobre os botões.
+
 ### Monorepo
 
 ```
@@ -104,15 +146,28 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   ex.: `rock` → `G:\Meu Drive\Musicas\Rock`) e varre: caminho relativo,
   tamanho, tags e duração. O reescaneamento é sob demanda, por um botão no web
   e um item no tray. Música que sumiu é **marcada** como sumida, nunca apagada.
-- **Identidade = alias da raiz + caminho relativo**, com `/` e normalizado em
-  NFC.
+- **Identidade = impressão digital do conteúdo, não o caminho.** O usuário
+  renomeia pastas do Drive de vez em quando, e caminho como identidade faria a
+  música "sumir" das playlists.
+  - **Playlists apontam para o ID interno da `Musica`**, nunca para caminho.
+    O caminho (alias da raiz + caminho relativo, com `/` e em NFC) é só "onde
+    ela está agora".
+  - **Impressão digital = tamanho + hash de 64 KB do meio do arquivo.** Do
+    meio porque as tags ID3 ficam no início e no fim: editar tag não muda a
+    impressão. É barato (~64 KB por faixa).
+  - **No reescaneamento:** caminho sumiu + arquivo novo com a mesma impressão
+    = mesma música, só muda o caminho. O que ficar ambíguo (duas candidatas,
+    ou tag editada junto com o rename) aparece no web para religar à mão.
+  - **Renomear a pasta raiz** é só trocar o caminho do alias no web.
+  - **O celular calcula a mesma impressão** dos arquivos locais (em cache por
+    `_ID` + `DATE_MODIFIED` do MediaStore) e casa por ela. Assim não depende
+    de o Autosync usar os mesmos nomes que o PC.
 - **Pastas do Autosync no celular hoje** (armazenamento interno, `/sdcard/`):
   - `Google Drive Autosync/#MediaFlow - Músicas`
   - `Google Drive Autosync/#MediaFlow - Audios`
-- **No celular**, cada alias aponta para a pasta correspondente do Autosync
-  (configurado nos ajustes do app). O app lê pelo MediaStore
-  (`READ_MEDIA_AUDIO`), casa as músicas pelo alias + caminho e mostra como
-  "não sincronizada" o que não está no aparelho.
+- **No celular**, os ajustes dizem quais pastas do Autosync olhar. O app lê
+  pelo MediaStore (`READ_MEDIA_AUDIO`), casa as músicas pela impressão
+  digital e mostra como "não sincronizada" o que não está no aparelho.
 
 ### Offline first, celular só lê
 
@@ -154,15 +209,15 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 - Android Studio instalado nas duas máquinas. No Windows, manter caminhos
   curtos (o projeto já está em `C:\Projetos\NeuroBeat`) e, se o Gradle
   reclamar de caminho longo, ligar o `LongPathsEnabled`.
-- O Autosync pode usar nomes de pasta diferentes no celular, e por isso o
-  mapeamento alias → pasta é explícito.
+- O Autosync pode usar nomes de pasta diferentes no celular. A impressão
+  digital resolve isso, sem depender de caminho.
 - Otimização de bateria da Motorola: isentar o app, senão o Android pode
   matar o player.
 
 ## Etapas
 
 1. [x] Decisões registradas neste arquivo.
-2. [ ] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75.
+2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
 3. [ ] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
 4. [ ] Infra do padrão (`.cmd`, tray, scripts de banco, publicação e tailnet).
 5. [ ] API: schema Prisma (`Raiz`, `Musica`, `Playlist`, `PlaylistItem`), scanner, CRUD, `/api/sync`.
