@@ -147,6 +147,12 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   de controle (biblioteca e playlists), aberta no navegador.
 - Dependências da API e do web nas mesmas versões do Trimly, que já
   funcionam juntas nesta máquina.
+- **A API de dev roda com `node --watch --import tsx`, e não `tsx watch`.**
+  O `tsx watch` 4.23 trava para sempre, sem erro e sem abrir a porta, quando
+  o stdin é um pipe (é o que o `concurrently` do `npm run dev` faz) e a cadeia
+  de imports chega ao Prisma Client gerado em `src/generated/`. Achado em
+  2026-10-15 por bissecção; **o Trimly tem o mesmo problema**. O `--watch`
+  nativo do Node reinicia igual ao salvar um arquivo.
 - No notebook não existe Google Drive. Para testar o scanner aqui, as músicas
   são copiadas do celular (`adb pull`) para `.dev/` (no `.gitignore`).
 
