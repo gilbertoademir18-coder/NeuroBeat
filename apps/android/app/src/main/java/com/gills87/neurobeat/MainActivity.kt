@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -173,6 +175,7 @@ private fun App(controller: MediaController?) {
     var aba by remember { mutableStateOf(0) }
     val prefs = remember { PlaybackService.preferencias(context) }
     var tocarJunto by remember { mutableStateOf(PlaybackService.tocarJunto(prefs)) }
+    var aberta by remember { mutableStateOf<Lista?>(null) }
 
     Scaffold(bottomBar = { NowPlaying(controller) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -205,28 +208,106 @@ private fun App(controller: MediaController?) {
                 )
             }
 
-            TabRow(selectedTabIndex = aba) {
-                Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Playlists") })
-                Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Pastas") })
-                Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Busca") })
-            }
+            // A página da playlist/pasta fica por cima das abas, que continuam
+            // compostas por baixo: ao voltar, a busca e a rolagem estão onde estavam.
+            Box(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize()) {
+                    TabRow(selectedTabIndex = aba) {
+                        Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Playlists") })
+                        Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Pastas") })
+                        Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Busca") })
+                    }
 
-            val lista = arquivos
-            if (lista == null) {
-                Text(progresso.ifEmpty { "Lendo as músicas do aparelho…" }, Modifier.padding(16.dp))
-                return@Column
+                    val lista = arquivos
+                    if (lista == null) {
+                        Text(progresso.ifEmpty { "Lendo as músicas do aparelho…" }, Modifier.padding(16.dp))
+                        return@Column
+                    }
+                    when (aba) {
+                        0 -> Playlists(pacote, porImpressao) { aberta = it }
+                        1 -> Pastas(lista) { aberta = it }
+                        else -> Busca(lista) { itens -> tocar(controller, itens, loop = false) }
+                    }
+                }
+                aberta?.let { l ->
+                    Surface(Modifier.fillMaxSize()) {
+                        Conteudo(
+                            l,
+                            voltar = { aberta = null },
+                            tocarTudo = { tocar(controller, l.faixas.mapNotNull { it.midia }, l.loop) },
+                            tocarUma = { tocar(controller, listOf(it), loop = false) },
+                        )
+                    }
+                }
             }
-            when (aba) {
-                0 -> Playlists(pacote, porImpressao) { itens, loop -> tocar(controller, itens, loop) }
-                1 -> Pastas(lista) { itens -> tocar(controller, itens, loop = true) }
-                else -> Busca(lista) { itens -> tocar(controller, itens, loop = false) }
+        }
+    }
+}
+
+/** Uma faixa da página de conteúdo. Sem `midia`, o arquivo não está no aparelho. */
+private data class Faixa(val titulo: String, val detalhe: String?, val midia: MediaItem?)
+
+/** O que a página mostra: uma playlist ou uma pasta, já resolvida em faixas. */
+private data class Lista(val titulo: String, val loop: Boolean, val faixas: List<Faixa>)
+
+@Composable
+private fun Conteudo(lista: Lista, voltar: () -> Unit, tocarTudo: () -> Unit, tocarUma: (MediaItem) -> Unit) {
+    BackHandler(onBack = voltar)
+    val noAparelho = lista.faixas.count { it.midia != null }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = voltar) { Text("←") }
+            Column(Modifier.weight(1f)) {
+                Text(lista.titulo, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    buildString {
+                        append("${lista.faixas.size} faixas")
+                        if (noAparelho < lista.faixas.size) append(" · ${lista.faixas.size - noAparelho} não estão no aparelho")
+                        if (lista.loop) append(" · 🔁")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        Button(
+            onClick = tocarTudo,
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            enabled = noAparelho > 0,
+        ) { Text("▶  Tocar tudo") }
+        HorizontalDivider()
+        LazyColumn(Modifier.fillMaxSize()) {
+            itemsIndexed(lista.faixas) { i, f ->
+                val midia = f.midia
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = midia != null) { midia?.let(tocarUma) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "${i + 1}",
+                        Modifier.padding(end = 16.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        val cor = if (midia != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                        Text(f.titulo, style = MaterialTheme.typography.bodyLarge, color = cor, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        val linha2 = if (midia == null) "não está no aparelho" else f.detalhe
+                        if (!linha2.isNullOrEmpty()) {
+                            Text(linha2, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                HorizontalDivider()
             }
         }
     }
 }
 
 @Composable
-private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, tocar: (List<MediaItem>, Boolean) -> Unit) {
+private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, abrir: (Lista) -> Unit) {
     if (pacote == null) {
         Text("Ainda sem playlists. Sincronize com o servidor (o Tailscale precisa estar ligado).", Modifier.padding(16.dp))
         return
@@ -245,17 +326,17 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
     }
     LazyColumn(Modifier.fillMaxSize()) {
         items(visiveis, key = { it.id }) { p ->
-            // Só o que tem arquivo no aparelho entra na fila; o resto é pulado.
-            val itens = p.musicaIds.mapIndexedNotNull { i, id ->
+            // A faixa sem arquivo no aparelho aparece na página, mas fica fora da fila.
+            val faixas = p.musicaIds.mapIndexedNotNull { i, id ->
                 val m = pacote.musicas[id] ?: return@mapIndexedNotNull null
-                val arquivo = porImpressao[m.impressao] ?: return@mapIndexedNotNull null
-                item(arquivo.uri, "${p.id}:$i", m.titulo, m.artista)
+                val arquivo = porImpressao[m.impressao]
+                Faixa(m.titulo, m.artista, arquivo?.let { item(it.uri, "${p.id}:$i", m.titulo, m.artista) })
             }
-            val faltam = p.musicaIds.size - itens.size
+            val faltam = p.musicaIds.size - faixas.count { it.midia != null }
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = itens.isNotEmpty()) { tocar(itens, p.loop) }
+                    .clickable { abrir(Lista(p.nome, p.loop, faixas)) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(p.nome + if (p.loop) "  🔁" else "", style = MaterialTheme.typography.titleMedium)
@@ -273,7 +354,7 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
 }
 
 @Composable
-private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit) {
+private fun Pastas(arquivos: List<ArquivoLocal>, abrir: (Lista) -> Unit) {
     val raizes = remember(arquivos) { arquivos.map { it.pasta.substringBefore('/') }.distinct().sorted() }
     var raiz by remember(raizes) { mutableStateOf(raizes.firstOrNull { it.contains("Músicas") } ?: raizes.firstOrNull()) }
     // Rola de lado: sem isso, o chip que não cabe é espremido até largura zero e
@@ -305,7 +386,11 @@ private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Uni
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { tocar(lista.map { item(it.uri, "a${it.id}", it.nome, pasta.ifEmpty { null }) }) }
+                    .clickable {
+                        val faixas = lista.map { Faixa(it.nome, null, item(it.uri, "a${it.id}", it.nome, pasta.ifEmpty { null })) }
+                        // Pasta toca em loop, como antes de existir a página.
+                        abrir(Lista(pasta.ifEmpty { "(soltas na raiz)" }, loop = true, faixas))
+                    }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(pasta.ifEmpty { "(soltas na raiz)" }, style = MaterialTheme.typography.titleMedium)
