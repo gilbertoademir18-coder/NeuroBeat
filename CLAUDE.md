@@ -103,7 +103,7 @@ notebook), com o celular por USB.
 | Kotlin / Compose compiler | 2.4.20 | plugin `org.jetbrains.kotlin.plugin.compose` |
 | Compose BOM | 2026.09.00 | exige `compileSdk = 37` |
 | Media3 | 1.11.1 | `media3-exoplayer` + `media3-session` |
-| JDK | 21 (o `jbr` do Android Studio, via `JAVA_HOME`) | |
+| JDK | 21 (o `jbr` do Android Studio, via `JAVA_HOME`) | No `overdrive`, o `jbr` do Studio 2026.2 é o 25, e compila igual |
 | SDK | `minSdk 33`, `targetSdk 36`, `compileSdk 37` | |
 
 O Moto G75 está no **Android 16**. Pacote do app: `com.gills87.neurobeat`.
@@ -292,12 +292,13 @@ Copiado do Trimly, com um item a mais: **Reescanear biblioteca**, que roda o
 (o menu não trava durante o escaneamento). O mesmo script serve para rodar à
 mão.
 
-### Banco: primeiro no notebook
+### Banco: no `overdrive`
 
-O desenvolvimento começa com o banco `neurobeat` no PostgreSQL 17 **deste
-notebook** (`criar-banco.ps1` com o host padrão `127.0.0.1`). Depois ele migra
-para o `overdrive` (criar lá, `pg_dump`/`pg_restore` se houver dados, trocar o
-host no `.env`).
+O banco `neurobeat` mora no PostgreSQL 17 do **`overdrive`** desde
+2026-10-15 (`docs/migracao-para-o-overdrive.md`). Começou do zero: o banco do
+notebook só tinha testes e o backup não foi restaurado. Para desenvolver no
+notebook, o `.env` de lá passa a apontar para `100.65.76.22` (passo 8 da
+migração).
 
 ## Riscos a conferir
 

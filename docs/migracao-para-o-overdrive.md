@@ -1,5 +1,12 @@
 # Migração para o `overdrive` (PC de casa)
 
+> **Feita em 2026-10-15.** Diferença do roteiro: o banco começou **do zero**
+> (o do notebook só tinha testes), então o passo 3 não foi executado e as
+> raízes foram cadastradas com "Adicionar pasta", não "Trocar pasta". Raízes
+> no `overdrive`: `musicas` (809), `audios` (142) e `workvault` (1), todas em
+> `C:\Users\Gills87\Meu Drive\`. Tailnet:
+> `https://overdrive.tail2c882a.ts.net:8447`. Falta o passo 8 (no notebook).
+
 Roteiro para levar o NeuroBeat do notebook (`dev`) para o PC de casa
 (`overdrive`), onde ele vai morar de vez: banco, servidor de produção, tray e
 o endereço que o celular sincroniza. Escrito no notebook em 2026-10-15, no fim
