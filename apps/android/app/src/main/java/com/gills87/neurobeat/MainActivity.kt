@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +23,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +50,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -187,7 +195,10 @@ private fun App(controller: MediaController?) {
     var tocarJunto by remember { mutableStateOf(PlaybackService.tocarJunto(prefs)) }
     var aberta by remember { mutableStateOf<Lista?>(null) }
 
-    Scaffold(bottomBar = { NowPlaying(controller) }) { padding ->
+    val capa = rememberCapa(controller)
+    Fundo(capa)
+    // Tudo por cima do fundo é transparente, para a capa aparecer atrás.
+    Scaffold(containerColor = Color.Transparent, bottomBar = { NowPlaying(controller, capa) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             if (!permitido) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -220,9 +231,11 @@ private fun App(controller: MediaController?) {
 
             // A página da playlist/pasta fica por cima das abas, que continuam
             // compostas por baixo: ao voltar, a busca e a rolagem estão onde estavam.
+            // Como a página é transparente (para a capa aparecer), as abas ficam
+            // invisíveis enquanto ela está aberta.
             Box(Modifier.fillMaxSize()) {
-                Column(Modifier.fillMaxSize()) {
-                    TabRow(selectedTabIndex = aba) {
+                Column(Modifier.fillMaxSize().alpha(if (aberta == null) 1f else 0f)) {
+                    TabRow(selectedTabIndex = aba, containerColor = Color.Transparent) {
                         Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Playlists") })
                         Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Pastas") })
                         Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Busca") })
@@ -240,7 +253,8 @@ private fun App(controller: MediaController?) {
                     }
                 }
                 aberta?.let { l ->
-                    Surface(Modifier.fillMaxSize()) {
+                    // O Surface, mesmo transparente, segura os toques: nada chega às abas por baixo.
+                    Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
                         Conteudo(
                             l,
                             voltar = { aberta = null },
@@ -472,7 +486,7 @@ private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit
 
 
 @Composable
-private fun NowPlaying(controller: MediaController?) {
+private fun NowPlaying(controller: MediaController?, capa: ImageBitmap?) {
     var title by remember { mutableStateOf("") }
     var origem by remember { mutableStateOf("") }
     var playing by remember { mutableStateOf(false) }
@@ -495,23 +509,36 @@ private fun NowPlaying(controller: MediaController?) {
     if (controller == null || title.isEmpty()) return
     // O fundo vai até a borda (por trás da barra de navegação), mas os botões
     // ficam acima dela: a bottomBar do Scaffold não desconta os insets sozinha.
-    Surface(tonalElevation = 3.dp) {
+    // Translúcida: a capa borrada do fundo aparece através da barra.
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            if (origem.isNotEmpty()) {
-                Text(
-                    origem,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (capa != null) {
+                    Image(
+                        capa,
+                        null,
+                        Modifier.padding(end = 12.dp).size(48.dp).clip(RoundedCornerShape(6.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Column(Modifier.weight(1f)) {
+                    if (origem.isNotEmpty()) {
+                        Text(
+                            origem,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                }
             }
-            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { controller.seekToPrevious() }) { Text("⏮") }
                 TextButton(onClick = { if (playing) controller.pause() else controller.play() }) {

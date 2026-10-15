@@ -257,6 +257,10 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   uma ligação não pausa a música. Fica nas `SharedPreferences` e o
   `PlaybackService` aplica na hora (`setAudioAttributes(..., handleAudioFocus)`).
   Não tem nada a ver com a permissão de sobrepor apps.
+- **Capa de fundo:** a capa embutida no arquivo da faixa atual
+  (`MediaMetadataRetriever.embeddedPicture`, lida no celular, sem passar pelo
+  servidor) fica borrada atrás de tudo, com um véu da cor de fundo, e em
+  miniatura na barra do player. Sem capa, fundo liso. `Capa.kt`.
 - Faixa da playlist sem arquivo no aparelho é pulada, e a lista mostra
   quantas faltam.
 - **Quem edita é o web.** O celular só lê, e por isso não há conflitos de
