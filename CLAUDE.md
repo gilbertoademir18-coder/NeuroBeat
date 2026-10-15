@@ -21,6 +21,11 @@ este aviso quando a migração estiver feita.)
   `C:\Projetos\Creativa\docs\padrao-de-projeto.md`. Na dúvida, copie do
   **Trimly** (`C:\Projetos\Trimly`).
 - Antes de dar algo por concluído: `npm run typecheck` e `npm run build`.
+  No Android, `.\gradlew.bat assembleDebug` em `apps\android`.
+- **Commit e push automáticos, direto na `main`.** O usuário é o único dev e
+  o único usuário do app: ao terminar cada mudança (verificada), faça o commit
+  e o `git push` sem perguntar. Não precisa de branch nem de PR. Decidido em
+  2026-10-15.
 - Todo `.ps1` é salvo em **UTF-8 com BOM** (sem o BOM, o PowerShell 5.1
   estraga os acentos).
 
@@ -242,9 +247,10 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   Android: zero dependência nova, zero plugin novo no Gradle (o KSP do Room
   seria mais um ponto de conflito, a lição do MediaFlow). Rever se um dia o
   volume de dados pedir consultas de verdade.
-- **Servidor configurável no app** (⚙), com dois atalhos: Notebook
-  (`https://dev.tail2c882a.ts.net:8447`, enquanto o banco mora aqui) e PC de
-  casa (`https://overdrive.tail2c882a.ts.net:8447`).
+- **Servidor fixo no app:** o `overdrive`
+  (`https://overdrive.tail2c882a.ts.net:8447`, `Sync.SERVIDOR`), que fica
+  ligado 24/7. Até 2026-10-15 havia um ⚙ para escolher entre ele e o
+  notebook; saiu com a migração.
 - Faixa da playlist sem arquivo no aparelho é pulada, e a lista mostra
   quantas faltam.
 - **Quem edita é o web.** O celular só lê, e por isso não há conflitos de

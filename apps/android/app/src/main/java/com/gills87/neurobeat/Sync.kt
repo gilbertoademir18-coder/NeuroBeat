@@ -27,14 +27,8 @@ data class Pacote(val geradoEm: String, val musicas: Map<Int, MusicaSync>, val p
 object Sync {
     private const val VERSAO = 1
 
-    /** O servidor, nos ajustes do app. Os dois atalhos da tela de ajustes. */
-    const val NOTEBOOK = "https://dev.tail2c882a.ts.net:8447"
-    const val PC_DE_CASA = "https://overdrive.tail2c882a.ts.net:8447"
-
-    private fun preferencias(context: Context) = context.getSharedPreferences("neurobeat", Context.MODE_PRIVATE)
-    fun servidor(context: Context): String = preferencias(context).getString("servidor", NOTEBOOK) ?: NOTEBOOK
-    fun definirServidor(context: Context, url: String) =
-        preferencias(context).edit().putString("servidor", url.trim().trimEnd('/')).apply()
+    /** O `overdrive`, ligado o tempo todo. O único servidor. */
+    private const val SERVIDOR = "https://overdrive.tail2c882a.ts.net:8447"
 
     private fun arquivo(context: Context) = File(context.filesDir, "sync.json")
 
@@ -46,7 +40,7 @@ object Sync {
      * exceção com mensagem legível se não conseguir — quem chama mostra.
      */
     fun baixar(context: Context): Pacote {
-        val url = URL("${servidor(context)}/api/sync")
+        val url = URL("$SERVIDOR/api/sync")
         val conexao = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 5_000
             readTimeout = 20_000

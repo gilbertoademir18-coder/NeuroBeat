@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -172,8 +171,6 @@ private fun App(controller: MediaController?) {
     }
 
     var aba by remember { mutableStateOf(0) }
-    var ajustes by remember { mutableStateOf(false) }
-    if (ajustes) Ajustes(onFechar = { mudou -> ajustes = false; if (mudou) sincronizar() })
 
     Scaffold(bottomBar = { NowPlaying(controller) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -186,7 +183,7 @@ private fun App(controller: MediaController?) {
                 return@Column
             }
 
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     statusSync,
                     Modifier.weight(1f),
@@ -195,7 +192,6 @@ private fun App(controller: MediaController?) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 TextButton(onClick = { sincronizar() }, enabled = !sincronizando) { Text("Sincronizar") }
-                TextButton(onClick = { ajustes = true }) { Text("⚙") }
             }
 
             TabRow(selectedTabIndex = aba) {
@@ -333,32 +329,6 @@ private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit
     }
 }
 
-@Composable
-private fun Ajustes(onFechar: (mudou: Boolean) -> Unit) {
-    val context = LocalContext.current
-    val atual = remember { Sync.servidor(context) }
-    var url by remember { mutableStateOf(atual) }
-    AlertDialog(
-        onDismissRequest = { onFechar(false) },
-        title = { Text("Servidor") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = url, onValueChange = { url = it }, singleLine = true, label = { Text("Endereço no tailnet") })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = url == Sync.NOTEBOOK, onClick = { url = Sync.NOTEBOOK }, label = { Text("Notebook") })
-                    FilterChip(selected = url == Sync.PC_DE_CASA, onClick = { url = Sync.PC_DE_CASA }, label = { Text("PC de casa") })
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                Sync.definirServidor(context, url)
-                onFechar(url.trim().trimEnd('/') != atual)
-            }) { Text("Salvar") }
-        },
-        dismissButton = { TextButton(onClick = { onFechar(false) }) { Text("Cancelar") } },
-    )
-}
 
 @Composable
 private fun NowPlaying(controller: MediaController?) {
