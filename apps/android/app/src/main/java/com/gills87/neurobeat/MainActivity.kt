@@ -235,8 +235,16 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
         Text("Nenhuma playlist no servidor. Crie uma no web.", Modifier.padding(16.dp))
         return
     }
+    var consulta by remember { mutableStateOf("") }
+    val termos = remember(consulta) { termosDe(consulta) }
+    val visiveis = remember(pacote, termos) { pacote.playlists.filter { casa(it.nome, termos) } }
+    CampoBusca(consulta, { consulta = it }, "Buscar playlist")
+    if (visiveis.isEmpty()) {
+        Text("Nenhuma playlist com esse nome.", Modifier.padding(16.dp))
+        return
+    }
     LazyColumn(Modifier.fillMaxSize()) {
-        items(pacote.playlists, key = { it.id }) { p ->
+        items(visiveis, key = { it.id }) { p ->
             // Só o que tem arquivo no aparelho entra na fila; o resto é pulado.
             val itens = p.musicaIds.mapIndexedNotNull { i, id ->
                 val m = pacote.musicas[id] ?: return@mapIndexedNotNull null
@@ -278,8 +286,20 @@ private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Uni
             FilterChip(selected = r == raiz, onClick = { raiz = r }, label = { Text(r.removePrefix("#MediaFlow - ")) })
         }
     }
-    val naRaiz = arquivos.filter { it.pasta.substringBefore('/') == raiz }
-    val pastas = naRaiz.groupBy { it.pasta.substringAfter('/', "") }.toList()
+    var consulta by remember { mutableStateOf("") }
+    val termos = remember(consulta) { termosDe(consulta) }
+    // Busca só dentro da raiz escolhida, pelo nome da pasta.
+    val pastas = remember(arquivos, raiz, termos) {
+        arquivos.filter { it.pasta.substringBefore('/') == raiz }
+            .groupBy { it.pasta.substringAfter('/', "") }
+            .toList()
+            .filter { casa(it.first, termos) }
+    }
+    CampoBusca(consulta, { consulta = it }, "Buscar pasta")
+    if (pastas.isEmpty() && termos.isNotEmpty()) {
+        Text("Nenhuma pasta com esse nome aqui.", Modifier.padding(16.dp))
+        return
+    }
     LazyColumn(Modifier.fillMaxSize()) {
         items(pastas, key = { it.first }) { (pasta, lista) ->
             Column(
@@ -300,23 +320,38 @@ private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Uni
 private fun semAcento(texto: String): String =
     Normalizer.normalize(texto, Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
 
+/** As palavras da busca, já sem acento. */
+private fun termosDe(consulta: String): List<String> = semAcento(consulta).split(' ').filter { it.isNotBlank() }
+
+/** Todas as palavras precisam aparecer: "naruto blue" não acha só "Naruto". Sem palavras, tudo casa. */
+private fun casa(texto: String, termos: List<String>): Boolean {
+    if (termos.isEmpty()) return true
+    val chave = semAcento(texto)
+    return termos.all { chave.contains(it) }
+}
+
+@Composable
+private fun CampoBusca(consulta: String, aoMudar: (String) -> Unit, rotulo: String) {
+    OutlinedTextField(
+        value = consulta,
+        onValueChange = aoMudar,
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        singleLine = true,
+        label = { Text(rotulo) },
+    )
+}
+
 @Composable
 private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit) {
     var consulta by remember { mutableStateOf("") }
     // Procura no nome e na pasta: "naruto" acha as faixas da pasta Naruto.
     val chaves = remember(arquivos) { arquivos.map { semAcento("${it.pasta}/${it.nome}") } }
-    val termos = remember(consulta) { semAcento(consulta).split(' ').filter { it.isNotBlank() } }
+    val termos = remember(consulta) { termosDe(consulta) }
     val achados = remember(arquivos, termos) {
         if (termos.isEmpty()) emptyList()
         else arquivos.filterIndexed { i, _ -> termos.all { chaves[i].contains(it) } }
     }
-    OutlinedTextField(
-        value = consulta,
-        onValueChange = { consulta = it },
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        singleLine = true,
-        label = { Text("Nome da música ou da pasta") },
-    )
+    CampoBusca(consulta, { consulta = it }, "Nome da música ou da pasta")
     if (termos.isEmpty()) return
     Text(
         "${achados.size} encontradas",
