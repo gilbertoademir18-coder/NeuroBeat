@@ -13,7 +13,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,8 +36,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +59,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.Normalizer
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,9 +72,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val context = LocalContext.current
-            val scheme = if (isSystemInDarkTheme()) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            MaterialTheme(colorScheme = scheme) {
+            NeuroBeatTema {
                 Surface(Modifier.fillMaxSize()) { App(controller) }
             }
         }
@@ -205,6 +201,7 @@ private fun App(controller: MediaController?) {
             TabRow(selectedTabIndex = aba) {
                 Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Playlists") })
                 Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Pastas") })
+                Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Busca") })
             }
 
             val lista = arquivos
@@ -214,7 +211,8 @@ private fun App(controller: MediaController?) {
             }
             when (aba) {
                 0 -> Playlists(pacote, porImpressao) { itens, loop -> tocar(controller, itens, loop) }
-                else -> Pastas(lista) { itens -> tocar(controller, itens, loop = true) }
+                1 -> Pastas(lista) { itens -> tocar(controller, itens, loop = true) }
+                else -> Busca(lista) { itens -> tocar(controller, itens, loop = false) }
             }
         }
     }
@@ -285,6 +283,50 @@ private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Uni
             ) {
                 Text(pasta.ifEmpty { "(soltas na raiz)" }, style = MaterialTheme.typography.titleMedium)
                 Text("${lista.size} faixas", style = MaterialTheme.typography.bodySmall)
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
+/** Minúsculas e sem acento, para "musica" achar "Música". */
+private fun semAcento(texto: String): String =
+    Normalizer.normalize(texto, Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
+
+@Composable
+private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit) {
+    var consulta by remember { mutableStateOf("") }
+    // Procura no nome e na pasta: "naruto" acha as faixas da pasta Naruto.
+    val chaves = remember(arquivos) { arquivos.map { semAcento("${it.pasta}/${it.nome}") } }
+    val termos = remember(consulta) { semAcento(consulta).split(' ').filter { it.isNotBlank() } }
+    val achados = remember(arquivos, termos) {
+        if (termos.isEmpty()) emptyList()
+        else arquivos.filterIndexed { i, _ -> termos.all { chaves[i].contains(it) } }
+    }
+    OutlinedTextField(
+        value = consulta,
+        onValueChange = { consulta = it },
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        singleLine = true,
+        label = { Text("Nome da música ou da pasta") },
+    )
+    if (termos.isEmpty()) return
+    Text(
+        "${achados.size} encontradas",
+        Modifier.padding(horizontal = 16.dp),
+        style = MaterialTheme.typography.bodySmall,
+    )
+    LazyColumn(Modifier.fillMaxSize()) {
+        items(achados, key = { it.id }) { a ->
+            val pasta = a.pasta.removePrefix("#MediaFlow - ")
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { tocar(listOf(item(a.uri, "b${a.id}", a.nome, pasta))) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                Text(a.nome, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(pasta, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             HorizontalDivider()
         }
