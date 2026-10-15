@@ -101,6 +101,14 @@ notebook), com o celular por USB.
 
 O Moto G75 está no **Android 16**. Pacote do app: `com.gills87.neurobeat`.
 
+**Ícone do app:** adaptativo e em vetor (`res/mipmap-anydpi/ic_launcher.xml`),
+com fundo em degradê, a linha de batimento na frente e a mesma linha como
+`monochrome` (ícones temáticos). O path é o do SVG de
+`apps/web/scripts/gerar-icones.mjs`, convertido à mão para o quadro de 108 dp
+(a conta está no comentário do `ic_launcher_frente.xml`). A notificação do
+player usa `ic_notificacao.xml` (a mesma linha, em 24 dp). Mudou a marca no
+SVG, recalcule os dois.
+
 Ciclo de desenvolvimento, de dentro de `apps/android`:
 
 ```powershell

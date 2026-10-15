@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Ícone pequeno da notificação do player: a mesma linha do ic_launcher_frente,
+    no quadro de 24 dp. O Android usa só a forma (o alfa) e pinta com a cor
+    dele, então a cor aqui não importa.
+
+    Do quadro de 108 (zona de 26..82 em x) para 24, ocupando ~20 dp: escala
+    0.357, centrado em (12, 12).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M2,12.48 H7.71 L10.1,6.05 L13.9,17.96 L16.29,12.48 H22"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

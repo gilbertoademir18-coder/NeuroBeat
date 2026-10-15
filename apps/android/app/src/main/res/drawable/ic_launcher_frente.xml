@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    A linha de batimento da marca. É o path do SVG de
+    apps/web/scripts/gerar-icones.mjs (quadro de 512), convertido para o quadro
+    de 108 dp do ícone adaptativo: escala 1/6, centrado em (54, 54), para caber
+    na zona segura de 66 dp que nenhum launcher recorta.
+
+      SVG:  M88 268 H184 L224 160 L288 360 L328 268 H424   (traço 44)
+      aqui: M26 55.33 H42 L48.67 37.33 L59.33 70.67 L66 55.33 H82   (traço 7.33)
+
+    Mudou a marca lá, recalcule aqui (e no ic_notificacao).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M26,55.33 H42 L48.67,37.33 L59.33,70.67 L66,55.33 H82"
+        android:strokeColor="#FFF8F7FB"
+        android:strokeWidth="7.33"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

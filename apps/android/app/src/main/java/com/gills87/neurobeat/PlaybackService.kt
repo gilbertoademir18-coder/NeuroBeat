@@ -1,10 +1,13 @@
 package com.gills87.neurobeat
 
 import android.content.Intent
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
@@ -32,6 +35,16 @@ class PlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
         session = MediaSession.Builder(this, player).setCallback(SessionCallback).build()
+        usarIconeDaMarcaNaNotificacao()
+    }
+
+    // O Media3 põe um ícone genérico de nota musical na notificação; aqui vai
+    // a linha de batimento do NeuroBeat.
+    @OptIn(UnstableApi::class)
+    private fun usarIconeDaMarcaNaNotificacao() {
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notificacao) },
+        )
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
