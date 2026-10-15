@@ -1,0 +1,12 @@
+* text=auto
+
+# O cmd.exe se perde com LF em .bat/.cmd; o PowerShell 5.1 prefere CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# O gradlew é um script sh: com CRLF ele quebra no Linux/Git Bash.
+gradlew text eol=lf
+
+*.jar binary
+*.png binary
