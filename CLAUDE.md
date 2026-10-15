@@ -140,6 +140,16 @@ O `apps/android` é independente do npm: o Android Studio abre só essa pasta.
 O contrato com a API é o JSON de `GET /api/sync`, documentado em
 `packages/shared`.
 
+- **`packages/shared` não tem build.** O `exports` aponta para o `.ts`, e o
+  `tsx` (API) e o Vite (web) compilam por conta própria. Não existe `dist`
+  para ficar velho depois de um `git pull`, armadilha em que o MediaFlow caiu.
+- **O web não é PWA.** O player do celular é o app Android; o web é a mesa
+  de controle (biblioteca e playlists), aberta no navegador.
+- Dependências da API e do web nas mesmas versões do Trimly, que já
+  funcionam juntas nesta máquina.
+- No notebook não existe Google Drive. Para testar o scanner aqui, as músicas
+  são copiadas do celular (`adb pull`) para `.dev/` (no `.gitignore`).
+
 ### Biblioteca e identidade da música
 
 - **A API indexa as músicas no PC.** Ela conhece as "raízes" (alias → pasta,
@@ -198,8 +208,16 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 | 3510 | Vite em `npm run dev` |
 | 8447 | HTTPS no tailnet (`tailscale serve` → 3500) |
 
-> Pendente: conferir no `overdrive` se estão livres e acrescentar o NeuroBeat
-> à tabela de portas do `padrao-de-projeto.md`.
+> A centena 3500 era a próxima livre pelo `padrao-de-projeto.md`, e o usuário
+> confirmou que nada no `overdrive` a usa. Pendente: acrescentar o NeuroBeat à
+> tabela de portas do `padrao-de-projeto.md` (no Creativa).
+
+### Banco: primeiro no notebook
+
+O desenvolvimento começa com o banco `neurobeat` no PostgreSQL 17 **deste
+notebook** (`criar-banco.ps1` com o host padrão `127.0.0.1`). Depois ele migra
+para o `overdrive` (criar lá, `pg_dump`/`pg_restore` se houver dados, trocar o
+host no `.env`).
 
 ## Riscos a conferir
 
@@ -218,8 +236,8 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 
 1. [x] Decisões registradas neste arquivo.
 2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
-3. [ ] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
-4. [ ] Infra do padrão (`.cmd`, tray, scripts de banco, publicação e tailnet).
+3. [x] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
+4. [ ] Infra do padrão. **Feito:** `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone. **Falta:** criar o banco (`criar-banco.ps1`, primeiro no notebook), migração inicial e, no `overdrive`, `publicar-no-tailnet.ps1` e liberar o banco no tailnet.
 5. [ ] API: schema Prisma (`Raiz`, `Musica`, `Playlist`, `PlaylistItem`), scanner, CRUD, `/api/sync`.
 6. [ ] Web: biblioteca com busca e filtro por raiz, editor de playlists (ordenar, loop).
 7. [ ] Android: permissões, alias → pasta, sync em Room, telas de playlists e player.

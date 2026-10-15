@@ -1,0 +1,84 @@
+// Schema do NeuroBeat.
+//
+// A conexão vem de `prisma.config.ts`, que lê DATABASE_URL do `.env` da raiz.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Uma pasta de músicas no PC.
+///
+/// O `alias` é estável e é por ele que o resto do sistema fala da pasta. O
+/// `caminho` é só onde ela está hoje: renomear a pasta no Drive é trocar o
+/// caminho aqui, e nada mais muda.
+model Raiz {
+  id       Int      @id @default(autoincrement())
+  alias    String   @unique
+  caminho  String
+  criadaEm DateTime @default(now()) @map("criada_em")
+  musicas  Musica[]
+
+  @@map("raizes")
+}
+
+/// Uma música, identificada pelo conteúdo e não pelo caminho.
+///
+/// As playlists apontam para o `id`. O par raiz + caminho é só "onde ela está
+/// agora": se o arquivo for renomeado ou movido, o reescaneamento acha a mesma
+/// `impressao` noutro caminho e atualiza o caminho, sem criar outra música.
+///
+/// Música que some do disco não é apagada: ganha `sumidaEm`, e as playlists
+/// continuam apontando para ela até ela voltar ou ser religada.
+model Musica {
+  id        Int       @id @default(autoincrement())
+  raizId    Int       @map("raiz_id")
+  raiz      Raiz      @relation(fields: [raizId], references: [id])
+  /// Relativo à raiz, com "/" e em NFC.
+  caminho   String
+  tamanho   BigInt
+  /// Impressão digital do conteúdo (ver `packages/shared`). O app Android
+  /// calcula a mesma, e é por ela que ele acha o arquivo no aparelho.
+  impressao String
+  titulo    String?
+  artista   String?
+  album     String?
+  duracaoMs Int?      @map("duracao_ms")
+  vistaEm   DateTime  @map("vista_em")
+  sumidaEm  DateTime? @map("sumida_em")
+  criadaEm  DateTime  @default(now()) @map("criada_em")
+  itens     PlaylistItem[]
+
+  @@unique([raizId, caminho])
+  @@index([impressao])
+  @@map("musicas")
+}
+
+model Playlist {
+  id           Int            @id @default(autoincrement())
+  nome         String
+  /// No fim da última faixa, volta para a primeira.
+  loop         Boolean        @default(false)
+  criadaEm     DateTime       @default(now()) @map("criada_em")
+  atualizadaEm DateTime       @updatedAt @map("atualizada_em")
+  itens        PlaylistItem[]
+
+  @@map("playlists")
+}
+
+/// Uma faixa numa playlist. A mesma música pode aparecer mais de uma vez.
+model PlaylistItem {
+  id         Int      @id @default(autoincrement())
+  playlistId Int      @map("playlist_id")
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  musicaId   Int      @map("musica_id")
+  musica     Musica   @relation(fields: [musicaId], references: [id])
+  posicao    Int
+
+  @@index([playlistId, posicao])
+  @@map("playlist_itens")
+}

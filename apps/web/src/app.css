@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/*
+ * As cores do app moram aqui, como variáveis, e o Tailwind só as referencia.
+ * Assim o tema escuro é trocar as variáveis — sem `dark:` espalhado por cada
+ * componente, que é como um dos dois temas acaba esquecido.
+ */
+:root {
+  color-scheme: light;
+  --fundo: #f8f7fb;
+  --superficie: #ffffff;
+  --borda: #e6e3ee;
+  --tinta: #1d1a24;
+  --tinta-2: #5b5668;
+  --tinta-3: #807a8e;
+  --destaque: #6d28d9;
+  --destaque-suave: #ede9fe;
+  --sobre-destaque: #ffffff;
+  --perigo: #b42318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fundo: #110f17;
+    --superficie: #19161f;
+    --borda: #2b2735;
+    --tinta: #ebe8f1;
+    --tinta-2: #aaa4b6;
+    --tinta-3: #7f798b;
+    --destaque: #a78bfa;
+    --destaque-suave: #2b2245;
+    --sobre-destaque: #170f2b;
+    --perigo: #f97066;
+  }
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-borda: var(--borda);
+  --color-tinta: var(--tinta);
+  --color-tinta-2: var(--tinta-2);
+  --color-tinta-3: var(--tinta-3);
+  --color-destaque: var(--destaque);
+  --color-destaque-suave: var(--destaque-suave);
+  --color-sobre-destaque: var(--sobre-destaque);
+  --color-perigo: var(--perigo);
+  --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* A calha da barra de rolagem fica reservada: abrir uma modal (que trava o
+   scroll) não faz a página saltar para o lado. */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* O preflight do Tailwind 4 deixa botão com a setinha; aqui ele ganha a
+   mãozinha, menos quando desabilitado. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Números que se comparam em coluna (durações) não dançam de largura. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
