@@ -106,6 +106,9 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   e um item no tray. Música que sumiu é **marcada** como sumida, nunca apagada.
 - **Identidade = alias da raiz + caminho relativo**, com `/` e normalizado em
   NFC.
+- **Pastas do Autosync no celular hoje** (armazenamento interno, `/sdcard/`):
+  - `Google Drive Autosync/#MediaFlow - Músicas`
+  - `Google Drive Autosync/#MediaFlow - Audios`
 - **No celular**, cada alias aponta para a pasta correspondente do Autosync
   (configurado nos ajustes do app). O app lê pelo MediaStore
   (`READ_MEDIA_AUDIO`), casa as músicas pelo alias + caminho e mostra como
