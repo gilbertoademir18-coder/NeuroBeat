@@ -247,9 +247,11 @@ private fun App(controller: MediaController?) {
                         Text(progresso.ifEmpty { "Lendo as músicas do aparelho…" }, Modifier.padding(16.dp))
                         return@Column
                     }
+                    // Abrir a playlist/pasta já começa a tocar tudo.
+                    val abrir = { l: Lista -> aberta = l; tocarTudo(controller, l) }
                     when (aba) {
-                        0 -> Playlists(pacote, porImpressao) { aberta = it }
-                        1 -> Pastas(lista) { aberta = it }
+                        0 -> Playlists(pacote, porImpressao, abrir)
+                        1 -> Pastas(lista, abrir)
                         else -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
                     }
                 }
@@ -259,7 +261,7 @@ private fun App(controller: MediaController?) {
                         Conteudo(
                             l,
                             voltar = { aberta = null },
-                            tocarTudo = { tocar(controller, l.faixas.mapNotNull { it.midia }, l.loop, origem = "${l.tipo}: ${l.titulo}") },
+                            tocarTudo = { tocarTudo(controller, l) },
                             tocarUma = { tocar(controller, listOf(it), loop = false, origem = "Música") },
                         )
                     }
@@ -268,6 +270,9 @@ private fun App(controller: MediaController?) {
         }
     }
 }
+
+private fun tocarTudo(controller: MediaController?, lista: Lista) =
+    tocar(controller, lista.faixas.mapNotNull { it.midia }, lista.loop, origem = "${lista.tipo}: ${lista.titulo}")
 
 /** Uma faixa da página de conteúdo. Sem `midia`, o arquivo não está no aparelho. */
 private data class Faixa(val titulo: String, val detalhe: String?, val midia: MediaItem?)
