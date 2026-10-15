@@ -191,7 +191,20 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 - **Pastas do Autosync no celular hoje** (armazenamento interno, `/sdcard/`):
   - `Google Drive Autosync/#MediaFlow - Músicas`
   - `Google Drive Autosync/#MediaFlow - Audios`
-- **No celular**, os ajustes dizem quais pastas do Autosync olhar. O app lê
+- **Raízes de mais de uma conta/pasta compartilhada.** Qualquer pasta vira
+  raiz, venha de onde vier. A **Músicas WorkVault** é uma pasta compartilhada
+  de outra conta que também aparece na conta principal. No notebook ela está
+  em `C:\Users\gilbe\Transmissão no Google Drive\.shortcut-targets-by-id\1uzMDcp6tIRXNKIyRTi-91ZjTIHx9PhTl\Músicas WorkVault`
+  (Drive em modo **streaming**: marcar a pasta como "Disponível off-line",
+  senão o que vem da nuvem é só atalho e o scanner baixaria cada arquivo).
+  No celular, ela precisa de um par no Autosync **dentro de
+  `Google Drive Autosync/`**, que é onde o app procura.
+- **Cadastrar cada pasta uma vez só.** Se uma raiz contiver outra (o "Meu
+  Drive" inteiro com o atalho da WorkVault dentro), os arquivos são lidos em
+  dobro e, como cópias idênticas nunca são religadas no chute, viram músicas
+  duplicadas.
+- **No celular**, o app indexa tudo o que está dentro de
+  `Google Drive Autosync/`. O app lê
   pelo MediaStore (`READ_MEDIA_AUDIO`), casa as músicas pela impressão
   digital e mostra como "não sincronizada" o que não está no aparelho.
 
