@@ -43,7 +43,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     /**
-     * "Tocar junto" ligado = não pedir o foco de áudio. Sem foco, o Android não
+     * "Misturar áudio" ligado = não pedir o foco de áudio. Sem foco, o Android não
      * manda pausar quando outro app (o YouTube) começa a tocar, e o NeuroBeat
      * também não pausa os outros. O preço: uma ligação não pausa a música.
      */

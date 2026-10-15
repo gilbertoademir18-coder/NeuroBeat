@@ -251,7 +251,8 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   (`https://overdrive.tail2c882a.ts.net:8447`, `Sync.SERVIDOR`), que fica
   ligado 24/7. Até 2026-10-15 havia um ⚙ para escolher entre ele e o
   notebook; saiu com a migração.
-- **"Tocar junto"** (chip no topo, ligado por padrão): o player não pede o
+- **"Misturar áudio"** (chip no topo, ligado por padrão; chamava "Tocar
+  junto", e a chave da preferência continua `tocarJunto`): o player não pede o
   foco de áudio, então toca junto com o YouTube e não pausa os outros apps.
   Desligado, volta ao normal (pausa quando outro app toca). O preço de ligado:
   uma ligação não pausa a música. Fica nas `SharedPreferences` e o

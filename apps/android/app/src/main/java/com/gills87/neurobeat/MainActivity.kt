@@ -116,7 +116,7 @@ private fun item(uri: Uri, id: String, titulo: String, artista: String?): MediaI
     .setMediaMetadata(MediaMetadata.Builder().setTitle(titulo).setArtist(artista).build())
     .build()
 
-/** Chave do "de onde veio" nos extras da faixa: "Playlist: CTRL", "Pasta: Naruto", "Música avulsa". */
+/** Chave do "de onde veio" nos extras da faixa: "Playlist: CTRL", "Pasta: Naruto", "Música". */
 private const val ORIGEM = "origem"
 
 private fun tocar(controller: MediaController?, itens: List<MediaItem>, loop: Boolean, origem: String) {
@@ -225,7 +225,7 @@ private fun App(controller: MediaController?) {
                         tocarJunto = !tocarJunto
                         prefs.edit().putBoolean(PlaybackService.TOCAR_JUNTO, tocarJunto).apply()
                     },
-                    label = { Text("Tocar junto") },
+                    label = { Text("Misturar áudio") },
                 )
             }
 
@@ -250,7 +250,7 @@ private fun App(controller: MediaController?) {
                     when (aba) {
                         0 -> Playlists(pacote, porImpressao) { aberta = it }
                         1 -> Pastas(lista) { aberta = it }
-                        else -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música avulsa") }
+                        else -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
                     }
                 }
                 aberta?.let { l ->
@@ -260,7 +260,7 @@ private fun App(controller: MediaController?) {
                             l,
                             voltar = { aberta = null },
                             tocarTudo = { tocar(controller, l.faixas.mapNotNull { it.midia }, l.loop, origem = "${l.tipo}: ${l.titulo}") },
-                            tocarUma = { tocar(controller, listOf(it), loop = false, origem = "Música avulsa") },
+                            tocarUma = { tocar(controller, listOf(it), loop = false, origem = "Música") },
                         )
                     }
                 }
