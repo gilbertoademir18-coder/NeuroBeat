@@ -258,6 +258,12 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   uma ligação não pausa a música. Fica nas `SharedPreferences` e o
   `PlaybackService` aplica na hora (`setAudioAttributes(..., handleAudioFocus)`).
   Não tem nada a ver com a permissão de sobrepor apps.
+- **Mais tocadas (aba Top):** o `PlaybackService` conta uma tocada quando a
+  faixa passa de 30 s (ou da metade, se for curta); cada volta do loop conta
+  de novo. A conta é por impressão digital e fica **só no celular**
+  (`tocadas.json`, `Tocadas.kt`): o celular não escreve no servidor. Se um
+  dia o web precisar mostrar isso, é uma rota nova de envio, a decidir.
+  Desinstalar o app zera a conta.
 - **Capa de fundo:** a capa embutida no arquivo da faixa atual
   (`MediaMetadataRetriever.embeddedPicture`, lida no celular, sem passar pelo
   servidor) fica borrada atrás de tudo, com um véu da cor de fundo, e em

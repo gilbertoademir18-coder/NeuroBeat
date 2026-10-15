@@ -107,13 +107,20 @@ class MainActivity : ComponentActivity() {
 }
 
 /** Uma faixa pronta para o player: o arquivo local e o que mostrar dele. */
-private fun item(uri: Uri, id: String, titulo: String, artista: String?): MediaItem = MediaItem.Builder()
+private fun item(uri: Uri, id: String, titulo: String, artista: String?, impressao: String): MediaItem = MediaItem.Builder()
     .setMediaId(id)
     .setUri(uri)
     // A URI não atravessa do controller para a sessão; o PlaybackService a
     // repõe a partir daqui.
     .setRequestMetadata(MediaItem.RequestMetadata.Builder().setMediaUri(uri).build())
-    .setMediaMetadata(MediaMetadata.Builder().setTitle(titulo).setArtist(artista).build())
+    .setMediaMetadata(
+        MediaMetadata.Builder()
+            .setTitle(titulo)
+            .setArtist(artista)
+            // O serviço conta as tocadas por ela.
+            .setExtras(Bundle().apply { putString(PlaybackService.IMPRESSAO, impressao) })
+            .build(),
+    )
     .build()
 
 /** Chave do "de onde veio" nos extras da faixa: "Playlist: CTRL", "Pasta: Naruto", "Música". */
@@ -126,7 +133,12 @@ private fun tocar(controller: MediaController?, itens: List<MediaItem>, loop: Bo
     // música tocando continua mostrando de onde ela veio.
     val marcados = itens.map {
         it.buildUpon()
-            .setMediaMetadata(it.mediaMetadata.buildUpon().setExtras(Bundle().apply { putString(ORIGEM, origem) }).build())
+            // Acrescenta aos extras que já vêm (a impressão), sem trocá-los.
+            .setMediaMetadata(
+                it.mediaMetadata.buildUpon()
+                    .setExtras(Bundle(it.mediaMetadata.extras ?: Bundle()).apply { putString(ORIGEM, origem) })
+                    .build(),
+            )
             .build()
     }
     c.setMediaItems(marcados, 0, 0L)
@@ -236,7 +248,7 @@ private fun App(controller: MediaController?) {
             // As abas ficam sempre à mostra, também com a página aberta; tocar
             // numa aba (mesmo a atual) fecha a página e volta para a lista dela.
             TabRow(selectedTabIndex = aba, containerColor = Color.Transparent) {
-                listOf("Playlists", "Pastas", "Busca").forEachIndexed { i, nome ->
+                listOf("Playlists", "Pastas", "Busca", "Top").forEachIndexed { i, nome ->
                     Tab(selected = aba == i, onClick = { aba = i; aberta = null }, text = { Text(nome) })
                 }
             }
@@ -252,7 +264,8 @@ private fun App(controller: MediaController?) {
                     when (aba) {
                         0 -> Playlists(pacote, porImpressao, abrir)
                         1 -> Pastas(lista, abrir)
-                        else -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
+                        2 -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
+                        else -> MaisTocadas(porImpressao) { itens, origem -> tocar(controller, itens, loop = false, origem) }
                     }
                 }
                 aberta?.let { l ->
@@ -360,7 +373,7 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
             val faixas = p.musicaIds.mapIndexedNotNull { i, id ->
                 val m = pacote.musicas[id] ?: return@mapIndexedNotNull null
                 val arquivo = porImpressao[m.impressao]
-                Faixa(m.titulo, m.artista, arquivo?.let { item(it.uri, "${p.id}:$i", m.titulo, m.artista) })
+                Faixa(m.titulo, m.artista, arquivo?.let { item(it.uri, "${p.id}:$i", m.titulo, m.artista, it.impressao) })
             }
             val faltam = p.musicaIds.size - faixas.count { it.midia != null }
             Column(
@@ -417,7 +430,7 @@ private fun Pastas(arquivos: List<ArquivoLocal>, abrir: (Lista) -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .clickable {
-                        val faixas = lista.map { Faixa(it.nome, null, item(it.uri, "a${it.id}", it.nome, pasta.ifEmpty { null })) }
+                        val faixas = lista.map { Faixa(it.nome, null, item(it.uri, "a${it.id}", it.nome, pasta.ifEmpty { null }, it.impressao)) }
                         // Pasta toca em loop, como antes de existir a página.
                         abrir(Lista("Pasta", pasta.ifEmpty { "(soltas na raiz)" }, loop = true, faixas))
                     }
@@ -427,6 +440,70 @@ private fun Pastas(arquivos: List<ArquivoLocal>, abrir: (Lista) -> Unit) {
                 Text("${lista.size} faixas", style = MaterialTheme.typography.bodySmall)
             }
             HorizontalDivider()
+        }
+    }
+}
+
+/**
+ * As mais tocadas (contadas pelo `PlaybackService`, ver `Tocadas`). Relê o
+ * arquivo cada vez que a aba abre. Música que saiu do aparelho some da lista,
+ * mas a conta dela fica guardada.
+ */
+@Composable
+private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, tocar: (List<MediaItem>, String) -> Unit) {
+    val context = LocalContext.current
+    var ranking by remember { mutableStateOf<List<Pair<ArquivoLocal, Tocadas.Registro>>?>(null) }
+    LaunchedEffect(porImpressao) {
+        val contagem = withContext(Dispatchers.IO) { Tocadas.ler(context) }
+        ranking = contagem.mapNotNull { (impressao, r) -> porImpressao[impressao]?.let { it to r } }
+            .sortedWith(compareByDescending<Pair<ArquivoLocal, Tocadas.Registro>> { it.second.vezes }.thenByDescending { it.second.ultimaEm })
+            .take(100)
+    }
+    val lista = ranking ?: return
+    if (lista.isEmpty()) {
+        Text("Nenhuma música contada ainda. Conta depois de 30 segundos ouvindo.", Modifier.padding(16.dp))
+        return
+    }
+    fun midia(a: ArquivoLocal) = item(a.uri, "t${a.id}", a.nome, a.pasta.removePrefix("#MediaFlow - "), a.impressao)
+    Column(Modifier.fillMaxSize()) {
+        Button(
+            onClick = { tocar(lista.map { midia(it.first) }, "Mais tocadas") },
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        ) { Text("▶  Tocar as mais tocadas") }
+        HorizontalDivider()
+        LazyColumn(Modifier.fillMaxSize()) {
+            itemsIndexed(lista, key = { _, (a, _) -> a.id }) { i, (a, r) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { tocar(listOf(midia(a)), "Música") }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "${i + 1}",
+                        Modifier.padding(end = 16.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(a.nome, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            a.pasta.removePrefix("#MediaFlow - "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        if (r.vezes == 1) "1 vez" else "${r.vezes} vezes",
+                        Modifier.padding(start = 12.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                HorizontalDivider()
+            }
         }
     }
 }
@@ -479,7 +556,7 @@ private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { tocar(listOf(item(a.uri, "b${a.id}", a.nome, pasta))) }
+                    .clickable { tocar(listOf(item(a.uri, "b${a.id}", a.nome, pasta, a.impressao))) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(a.nome, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

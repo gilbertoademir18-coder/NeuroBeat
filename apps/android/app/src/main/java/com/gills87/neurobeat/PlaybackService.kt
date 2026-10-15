@@ -3,10 +3,13 @@ package com.gills87.neurobeat
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -14,6 +17,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import java.util.concurrent.Executors
 
 /**
  * Serviço em primeiro plano que segura o player. O Media3 cuida da notificação
@@ -36,10 +40,47 @@ class PlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
         session = MediaSession.Builder(this, player).setCallback(SessionCallback).build()
+        player.addListener(contador)
         val prefs = preferencias(this)
         aplicarFoco(prefs)
         prefs.registerOnSharedPreferenceChangeListener(aoMudarPreferencia)
         usarIconeDaMarcaNaNotificacao()
+    }
+
+    // Contagem das mais tocadas: cada vez que uma faixa começa (inclusive a
+    // volta do loop), ela conta uma vez, depois de 30 s ouvindo, ou metade da
+    // faixa se for curta. Pular no começo não conta.
+    private val relogio = Handler(Looper.getMainLooper())
+    private val gravador = Executors.newSingleThreadExecutor()
+    private var jaContou = false
+
+    private val conferir = object : Runnable {
+        override fun run() {
+            val p = session?.player ?: return
+            val impressao = p.currentMediaItem?.mediaMetadata?.extras?.getString(IMPRESSAO)
+            if (!jaContou && impressao != null) {
+                val duracao = p.duration
+                val limite = if (duracao > 0) minOf(30_000L, duracao / 2) else 30_000L
+                if (p.currentPosition >= limite) {
+                    jaContou = true
+                    gravador.execute { Tocadas.contar(this@PlaybackService, impressao) }
+                }
+            }
+            if (!jaContou) relogio.postDelayed(this, 2_000)
+        }
+    }
+
+    private val contador = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            jaContou = false
+            relogio.removeCallbacks(conferir)
+            if (session?.player?.isPlaying == true) relogio.post(conferir)
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            relogio.removeCallbacks(conferir)
+            if (isPlaying) relogio.post(conferir)
+        }
     }
 
     /**
@@ -74,6 +115,8 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         preferencias(this).unregisterOnSharedPreferenceChangeListener(aoMudarPreferencia)
+        relogio.removeCallbacks(conferir)
+        gravador.shutdown()
         session?.run {
             player.release()
             release()
@@ -85,6 +128,9 @@ class PlaybackService : MediaSessionService() {
     companion object {
         /** Preferência compartilhada entre a tela (que muda) e o serviço (que aplica). */
         const val TOCAR_JUNTO = "tocarJunto"
+
+        /** Chave da impressão digital nos extras da faixa, para contar as tocadas. */
+        const val IMPRESSAO = "impressao"
 
         fun preferencias(context: Context): SharedPreferences =
             context.getSharedPreferences("neurobeat", Context.MODE_PRIVATE)
