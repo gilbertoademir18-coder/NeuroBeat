@@ -228,6 +228,22 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 > confirmou que nada no `overdrive` a usa. Já está na tabela de portas do
 > padrão (no Creativa), que também ganhou a seção sobre a API de dev.
 
+### A API só ouve em 127.0.0.1
+
+Em dev e em produção, ao contrário do `0.0.0.0` do Trimly e do Creativa.
+Quem vem de fora (o app Android, o web de outro aparelho) chega pelo
+`tailscale serve` (HTTPS na 8447), que entra por `127.0.0.1`. Assim o tray
+ligado no notebook do trabalho não expõe nada na rede da empresa. Decidido
+pelo usuário em 2026-10-15. Não existe acesso direto por
+`http://<IP do tailnet>:3500`, e não deve existir.
+
+### Tray
+
+Copiado do Trimly, com um item a mais: **Reescanear biblioteca**, que roda o
+`scripts\escanear.ps1` num processo sem janela e mostra o resumo num balão
+(o menu não trava durante o escaneamento). O mesmo script serve para rodar à
+mão.
+
 ### Banco: primeiro no notebook
 
 O desenvolvimento começa com o banco `neurobeat` no PostgreSQL 17 **deste
@@ -254,7 +270,7 @@ host no `.env`).
 2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
 3. [x] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
 4. [ ] Infra do padrão. **Feito:** `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone. **Falta:** criar o banco (`criar-banco.ps1`, primeiro no notebook), migração inicial e, no `overdrive`, `publicar-no-tailnet.ps1` e liberar o banco no tailnet.
-5. [ ] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. **Falta:** CRUD de playlists, `GET /api/sync`, item "Reescanear biblioteca" no tray.
+5. [ ] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. **Falta:** CRUD de playlists e `GET /api/sync`.
 6. [ ] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). **Falta:** editor de playlists (ordenar, loop).
 7. [ ] Android: permissões, alias → pasta, sync em Room, telas de playlists e player.
 8. [ ] APK de release instalado no Moto G75.

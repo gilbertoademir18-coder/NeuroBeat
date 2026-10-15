@@ -75,8 +75,8 @@ if (!MODO_DEV && existsSync(WEB_DIST)) {
   app.log.warn(`Front não encontrado em ${WEB_DIST} — rode "npm run build". Servindo só a API.`);
 }
 
-// Produção em 0.0.0.0: o `tailscale serve` chega por 127.0.0.1, mas assim
-// também dá para abrir direto pelo IP do tailnet se o serve estiver fora.
-// Dev só no localhost: quem fala com ela é o Vite, e no notebook do trabalho
-// 0.0.0.0 abriria a API para a rede da empresa.
-await app.listen({ port: PORTA, host: MODO_DEV ? "127.0.0.1" : "0.0.0.0" });
+// Só no localhost, em dev e em produção. Quem chega de fora (celular, outros
+// PCs) vem pelo `tailscale serve`, que entra por 127.0.0.1 — e o HTTPS dele é
+// o que o Android exige. Com 0.0.0.0, no notebook do trabalho, a API ficaria
+// aberta na rede da empresa. Diferente do Trimly e do Creativa de propósito.
+await app.listen({ port: PORTA, host: "127.0.0.1" });
