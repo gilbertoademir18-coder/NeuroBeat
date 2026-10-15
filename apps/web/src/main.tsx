@@ -4,16 +4,18 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import "./app.css";
 import { Layout } from "./layout.tsx";
 import { Biblioteca } from "./paginas/biblioteca.tsx";
+import { Playlist } from "./paginas/playlist.tsx";
+import { Playlists } from "./paginas/playlists.tsx";
 
-/*
- * A tela de playlists (editor com ordem e loop) vem a seguir e vira um ramo
- * aqui, com um link no cabeçalho.
- */
 const roteador = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
-    children: [{ index: true, element: <Biblioteca /> }],
+    children: [
+      { index: true, element: <Biblioteca /> },
+      { path: "playlists", element: <Playlists /> },
+      { path: "playlists/:id", element: <Playlist /> },
+    ],
   },
 ]);
 

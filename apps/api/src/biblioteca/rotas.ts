@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.ts";
 import { primeiroErro } from "../lib/validacao.ts";
+import { musicaDto } from "./dto.ts";
 import { escanearBiblioteca } from "./escanear.ts";
 
 function ehPasta(caminho: string): boolean {
@@ -80,15 +81,6 @@ export async function rotasBiblioteca(app: FastifyInstance) {
       include: { raiz: { select: { alias: true } } },
       orderBy: [{ raiz: { alias: "asc" } }, { caminho: "asc" }],
     });
-    return musicas.map((m) => ({
-      id: m.id,
-      raiz: m.raiz.alias,
-      caminho: m.caminho,
-      titulo: m.titulo ?? m.caminho,
-      artista: m.artista,
-      album: m.album,
-      duracaoMs: m.duracaoMs,
-      sumida: m.sumidaEm !== null,
-    }));
+    return musicas.map(musicaDto);
   });
 }

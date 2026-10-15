@@ -76,6 +76,35 @@ export interface MusicaDto {
   sumida: boolean;
 }
 
+/* -------------------------------------------------------------------------
+ * Playlists
+ * ---------------------------------------------------------------------- */
+
+/** `GET /api/playlists` */
+export interface PlaylistResumoDto {
+  id: number;
+  nome: string;
+  loop: boolean;
+  faixas: number;
+  /** Soma das faixas com duração conhecida. */
+  duracaoMs: number;
+  atualizadaEm: string;
+}
+
+/** `GET /api/playlists/:id` e a resposta de toda alteração nela. */
+export interface PlaylistDto {
+  id: number;
+  nome: string;
+  loop: boolean;
+  /** Na ordem de tocar. A mesma música pode aparecer mais de uma vez. */
+  itens: { id: number; musica: MusicaDto }[];
+}
+
+/** `PUT /api/playlists/:id/itens`: a lista inteira, na ordem nova. */
+export interface ItensDaPlaylist {
+  musicaIds: number[];
+}
+
 /** `POST /api/biblioteca/escanear` */
 export interface ResultadoEscaneamento {
   raizes: { alias: string; arquivos: number; erro?: string }[];

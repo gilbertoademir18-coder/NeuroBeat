@@ -270,7 +270,7 @@ host no `.env`).
 2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
 3. [x] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
 4. [ ] Infra do padrão. **Feito:** `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone. **Falta:** criar o banco (`criar-banco.ps1`, primeiro no notebook), migração inicial e, no `overdrive`, `publicar-no-tailnet.ps1` e liberar o banco no tailnet.
-5. [ ] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. **Falta:** CRUD de playlists e `GET /api/sync`.
-6. [ ] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). **Falta:** editor de playlists (ordenar, loop).
+5. [ ] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. Playlists (`/api/playlists`: listar, criar, renomear, loop, excluir e `PUT /:id/itens` com a lista inteira na ordem nova, numa transação). **Falta:** `GET /api/sync`.
+6. [x] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). Editor de playlists (arrastar com o `useArrastavel` do Trimly, ↑↓, ×, loop, busca para adicionar; cada mudança salva sozinha). **Falta:** nada para a primeira versão.
 7. [ ] Android: permissões, alias → pasta, sync em Room, telas de playlists e player.
 8. [ ] APK de release instalado no Moto G75.

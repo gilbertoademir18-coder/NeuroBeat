@@ -1,15 +1,7 @@
 import type { MusicaDto, RaizDto, ResultadoEscaneamento } from "@neurobeat/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.ts";
-
-function duracao(ms: number | null): string {
-  if (ms === null) return "—";
-  const s = Math.round(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const ss = String(s % 60).padStart(2, "0");
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
-}
+import { duracao } from "../formato.ts";
 
 function resumo(r: ResultadoEscaneamento): string {
   const partes = [
