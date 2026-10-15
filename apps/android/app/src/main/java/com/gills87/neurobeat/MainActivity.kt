@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -261,7 +263,12 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
 private fun Pastas(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit) {
     val raizes = remember(arquivos) { arquivos.map { it.pasta.substringBefore('/') }.distinct().sorted() }
     var raiz by remember(raizes) { mutableStateOf(raizes.firstOrNull { it.contains("Músicas") } ?: raizes.firstOrNull()) }
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Rola de lado: sem isso, o chip que não cabe é espremido até largura zero e
+    // o texto quebra letra a letra, deixando a linha altíssima.
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         raizes.forEach { r ->
             FilterChip(selected = r == raiz, onClick = { raiz = r }, label = { Text(r.removePrefix("#MediaFlow - ")) })
         }
