@@ -52,6 +52,20 @@ export function trechoDaAmostra(tamanho: number): { inicio: number; comprimento:
  * Biblioteca
  * ---------------------------------------------------------------------- */
 
+/**
+ * O título de uma música é o nome do arquivo, sem a extensão. Nunca a tag:
+ * renomear um arquivo é mais fácil que editar metadados, e o nome
+ * acompanha o rename na hora (o scanner não relê tags de música só movida).
+ *
+ * `"3 Doors Down/Changes.mp3"` → `"Changes"`;
+ * `"Matt Walsh/This Has To Stop..m4a"` → `"This Has To Stop."`.
+ */
+export function tituloDoArquivo(caminho: string): string {
+  const nome = caminho.slice(caminho.lastIndexOf("/") + 1);
+  const ponto = nome.lastIndexOf(".");
+  return ponto > 0 ? nome.slice(0, ponto) : nome;
+}
+
 /** `GET /api/raizes` */
 export interface RaizDto {
   id: number;
@@ -69,6 +83,7 @@ export interface MusicaDto {
   raiz: string;
   /** Relativo à raiz, com "/". */
   caminho: string;
+  /** Nome do arquivo sem extensão (`tituloDoArquivo`), nunca a tag. */
   titulo: string;
   artista: string | null;
   album: string | null;
@@ -122,6 +137,7 @@ export interface SyncDto {
   musicas: {
     id: number;
     impressao: string;
+    /** Nome do arquivo sem extensão (`tituloDoArquivo`), nunca a tag. */
     titulo: string;
     artista: string | null;
     duracaoMs: number | null;

@@ -44,6 +44,8 @@ model Musica {
   /// Impressão digital do conteúdo (ver `packages/shared`). O app Android
   /// calcula a mesma, e é por ela que ele acha o arquivo no aparelho.
   impressao String
+  /// O título da TAG, guardado só como informação. O título que o app mostra
+  /// é sempre o nome do arquivo (`tituloDoArquivo` em `packages/shared`).
   titulo    String?
   artista   String?
   album     String?

@@ -207,6 +207,14 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   senão o que vem da nuvem é só atalho e o scanner baixaria cada arquivo).
   No celular, ela precisa de um par no Autosync **dentro de
   `Google Drive Autosync/`**, que é onde o app procura.
+- **O título de uma música é o nome do arquivo, sem a extensão. Nunca a
+  tag.** Decisão do usuário: renomear o arquivo é mais fácil que editar
+  metadados. O título é derivado do caminho na hora de responder
+  (`tituloDoArquivo` em `packages/shared`), e não gravado no scan; assim ele
+  acompanha o rename mesmo quando o scanner só atualiza o caminho de uma
+  música movida (sem reler tags). A coluna `titulo` do banco guarda a tag só
+  como informação; nenhuma tela a mostra. Artista e duração continuam vindo
+  das tags.
 - **Cadastrar cada pasta uma vez só.** Se uma raiz contiver outra (o "Meu
   Drive" inteiro com o atalho da WorkVault dentro), os arquivos são lidos em
   dobro e, como cópias idênticas nunca são religadas no chute, viram músicas

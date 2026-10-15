@@ -1,4 +1,4 @@
-import type { SyncDto } from "@neurobeat/shared";
+import { type SyncDto, tituloDoArquivo } from "@neurobeat/shared";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.ts";
 
@@ -25,7 +25,7 @@ export async function rotasSync(app: FastifyInstance) {
       musicas: musicas.map((m) => ({
         id: m.id,
         impressao: m.impressao,
-        titulo: m.titulo ?? m.caminho,
+        titulo: tituloDoArquivo(m.caminho),
         artista: m.artista,
         duracaoMs: m.duracaoMs,
         caminho: `${m.raiz.alias}/${m.caminho}`,
