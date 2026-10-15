@@ -225,8 +225,8 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 | 8447 | HTTPS no tailnet (`tailscale serve` → 3500) |
 
 > A centena 3500 era a próxima livre pelo `padrao-de-projeto.md`, e o usuário
-> confirmou que nada no `overdrive` a usa. Pendente: acrescentar o NeuroBeat à
-> tabela de portas do `padrao-de-projeto.md` (no Creativa).
+> confirmou que nada no `overdrive` a usa. Já está na tabela de portas do
+> padrão (no Creativa), que também ganhou a seção sobre a API de dev.
 
 ### Banco: primeiro no notebook
 
