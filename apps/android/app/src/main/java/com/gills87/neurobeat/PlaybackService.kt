@@ -1,6 +1,8 @@
 package com.gills87.neurobeat
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -20,22 +22,37 @@ import com.google.common.util.concurrent.ListenableFuture
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
 
+    // Guardado num campo: o SharedPreferences só segura o listener por
+    // referência fraca, e um lambda solto seria coletado.
+    private val aoMudarPreferencia = SharedPreferences.OnSharedPreferenceChangeListener { prefs, chave ->
+        if (chave == TOCAR_JUNTO) aplicarFoco(prefs)
+    }
+
     override fun onCreate() {
         super.onCreate()
         val player = ExoPlayer.Builder(this)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                /* handleAudioFocus = */ true,
-            )
             // Fone desconectado pausa, em vez de sair no alto-falante.
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
         session = MediaSession.Builder(this, player).setCallback(SessionCallback).build()
+        val prefs = preferencias(this)
+        aplicarFoco(prefs)
+        prefs.registerOnSharedPreferenceChangeListener(aoMudarPreferencia)
         usarIconeDaMarcaNaNotificacao()
+    }
+
+    /**
+     * "Tocar junto" ligado = não pedir o foco de áudio. Sem foco, o Android não
+     * manda pausar quando outro app (o YouTube) começa a tocar, e o NeuroBeat
+     * também não pausa os outros. O preço: uma ligação não pausa a música.
+     */
+    private fun aplicarFoco(prefs: SharedPreferences) {
+        val atributos = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+        session?.player?.let { (it as ExoPlayer).setAudioAttributes(atributos, /* handleAudioFocus = */ !tocarJunto(prefs)) }
     }
 
     // O Media3 põe um ícone genérico de nota musical na notificação; aqui vai
@@ -56,12 +73,23 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        preferencias(this).unregisterOnSharedPreferenceChangeListener(aoMudarPreferencia)
         session?.run {
             player.release()
             release()
         }
         session = null
         super.onDestroy()
+    }
+
+    companion object {
+        /** Preferência compartilhada entre a tela (que muda) e o serviço (que aplica). */
+        const val TOCAR_JUNTO = "tocarJunto"
+
+        fun preferencias(context: Context): SharedPreferences =
+            context.getSharedPreferences("neurobeat", Context.MODE_PRIVATE)
+
+        fun tocarJunto(prefs: SharedPreferences) = prefs.getBoolean(TOCAR_JUNTO, true)
     }
 
     private object SessionCallback : MediaSession.Callback {

@@ -171,6 +171,8 @@ private fun App(controller: MediaController?) {
     }
 
     var aba by remember { mutableStateOf(0) }
+    val prefs = remember { PlaybackService.preferencias(context) }
+    var tocarJunto by remember { mutableStateOf(PlaybackService.tocarJunto(prefs)) }
 
     Scaffold(bottomBar = { NowPlaying(controller) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
@@ -192,6 +194,15 @@ private fun App(controller: MediaController?) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 TextButton(onClick = { sincronizar() }, enabled = !sincronizando) { Text("Sincronizar") }
+                // O serviço escuta a preferência e troca o foco de áudio na hora.
+                FilterChip(
+                    selected = tocarJunto,
+                    onClick = {
+                        tocarJunto = !tocarJunto
+                        prefs.edit().putBoolean(PlaybackService.TOCAR_JUNTO, tocarJunto).apply()
+                    },
+                    label = { Text("Tocar junto") },
+                )
             }
 
             TabRow(selectedTabIndex = aba) {

@@ -251,6 +251,12 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   (`https://overdrive.tail2c882a.ts.net:8447`, `Sync.SERVIDOR`), que fica
   ligado 24/7. Até 2026-10-15 havia um ⚙ para escolher entre ele e o
   notebook; saiu com a migração.
+- **"Tocar junto"** (chip no topo, ligado por padrão): o player não pede o
+  foco de áudio, então toca junto com o YouTube e não pausa os outros apps.
+  Desligado, volta ao normal (pausa quando outro app toca). O preço de ligado:
+  uma ligação não pausa a música. Fica nas `SharedPreferences` e o
+  `PlaybackService` aplica na hora (`setAudioAttributes(..., handleAudioFocus)`).
+  Não tem nada a ver com a permissão de sobrepor apps.
 - Faixa da playlist sem arquivo no aparelho é pulada, e a lista mostra
   quantas faltam.
 - **Quem edita é o web.** O celular só lê, e por isso não há conflitos de
