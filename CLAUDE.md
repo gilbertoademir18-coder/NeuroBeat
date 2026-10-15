@@ -172,6 +172,16 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   - **O celular calcula a mesma impressão** dos arquivos locais (em cache por
     `_ID` + `DATE_MODIFIED` do MediaStore) e casa por ela. Assim não depende
     de o Autosync usar os mesmos nomes que o PC.
+  - **A especificação exata** (bytes da amostra, formato do hash) mora em
+    `packages/shared/src/index.ts`. Mudou lá, muda no Kotlin junto.
+- **Onde está o código:** `apps/api/src/biblioteca/`. O `reconciliar.ts` é uma
+  função pura (banco × disco → plano) com testes caso a caso; o
+  `escanear.ts` lê o disco, as tags (`music-metadata` 11.x) e aplica o plano.
+  Raiz cuja pasta não existe é pulada, e as músicas dela não viram "sumidas".
+  Cópias do mesmo arquivo nunca são religadas no chute.
+- Medido em 2026-10-15 com 60 arquivos de amostra (mp3, flac, m4a, wma): todas
+  as tags e durações lidas, nenhuma impressão repetida, 4,3 s para 648 MB,
+  quase todo o tempo nas tags.
 - **Pastas do Autosync no celular hoje** (armazenamento interno, `/sdcard/`):
   - `Google Drive Autosync/#MediaFlow - Músicas`
   - `Google Drive Autosync/#MediaFlow - Audios`
@@ -238,7 +248,7 @@ host no `.env`).
 2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
 3. [x] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
 4. [ ] Infra do padrão. **Feito:** `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone. **Falta:** criar o banco (`criar-banco.ps1`, primeiro no notebook), migração inicial e, no `overdrive`, `publicar-no-tailnet.ps1` e liberar o banco no tailnet.
-5. [ ] API: schema Prisma (`Raiz`, `Musica`, `Playlist`, `PlaylistItem`), scanner, CRUD, `/api/sync`.
-6. [ ] Web: biblioteca com busca e filtro por raiz, editor de playlists (ordenar, loop).
+5. [ ] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. **Falta:** CRUD de playlists, `GET /api/sync`, item "Reescanear biblioteca" no tray.
+6. [ ] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). **Falta:** editor de playlists (ordenar, loop).
 7. [ ] Android: permissões, alias → pasta, sync em Room, telas de playlists e player.
 8. [ ] APK de release instalado no Moto G75.
