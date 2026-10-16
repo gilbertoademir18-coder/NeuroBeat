@@ -6,6 +6,13 @@
 - Use linguagem natural, como um colega de equipe.
 - Seja proativo ao sugerir melhorias.
 
+# ⚠️ Pendente no `overdrive`
+
+Se esta sessão está no **PC de casa (`overdrive`)**, siga
+`docs/pendencias-no-overdrive.md` antes de qualquer outra coisa: mover a
+chave de assinatura do app (chegou por Taildrop) e publicar a versão nova do
+servidor. (Remova este aviso quando estiver feito.)
+
 # Como trabalhar neste projeto
 
 - **Toda decisão de projeto vai para este arquivo.** Se combinamos algo na
