@@ -10,8 +10,9 @@
 
 Se esta sessão está no **PC de casa (`overdrive`)**, siga
 `docs/pendencias-no-overdrive.md` antes de qualquer outra coisa: mover a
-chave de assinatura do app (chegou por Taildrop) e publicar a versão nova do
-servidor. (Remova este aviso quando estiver feito.)
+chave de assinatura do app (chegou por Taildrop), publicar a versão nova do
+servidor e trocar o caminho da raiz `workvault`, que foi renomeada. (Remova
+este aviso quando estiver feito.)
 
 # Como trabalhar neste projeto
 
@@ -356,10 +357,24 @@ pelo usuário em 2026-10-15. Não existe acesso direto por
 
 ### Tray
 
-Copiado do Trimly, com um item a mais: **Reescanear biblioteca**, que roda o
-`scripts\escanear.ps1` num processo sem janela e mostra o resumo num balão
-(o menu não trava durante o escaneamento). O mesmo script serve para rodar à
-mão.
+Copiado do Trimly, com dois itens a mais:
+
+- **Reescanear biblioteca**, que roda o `scripts\escanear.ps1` num processo
+  sem janela e mostra o resumo num balão (o menu não trava durante o
+  escaneamento). O mesmo script serve para rodar à mão.
+- **Pastas de músicas ▸**, submenu que abre cada pasta no Explorer. Os
+  caminhos mudam por máquina, então a lista é **desta máquina**, remontada a
+  cada abertura do menu, de duas fontes: as raízes cadastradas cuja pasta
+  existe aqui (no `overdrive`, todas, sem configurar nada) e o
+  `pastas-de-musicas.txt` da raiz do projeto (**fora do git**, uma linha
+  `Nome=Caminho` por pasta), para o que só esta máquina tem. O item **Editar
+  a lista desta máquina…** cria o arquivo com um modelo e abre no Bloco de
+  Notas. No notebook, o arquivo tem a WorkVault (o caminho do Drive em
+  streaming).
+
+O tray **pode rodar no notebook** só pelos atalhos: o servidor que ele sobe
+lá ouve só em `127.0.0.1` e usa o banco de casa pelo `.env`. Ele só não fica
+em "Iniciar com o Windows" nem publica no tailnet.
 
 ### Banco: no `overdrive`
 

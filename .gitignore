@@ -25,3 +25,6 @@ coverage/
 # misc
 .DS_Store
 npm-debug.log*
+
+# pastas de músicas deste computador, para o menu do tray (o caminho muda por máquina)
+pastas-de-musicas.txt

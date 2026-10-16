@@ -75,3 +75,21 @@ $r = Invoke-RestMethod http://127.0.0.1:3500/api/sync
 
 No celular: **Sincronizar**, e na aba **Busca** (sem digitar nada) as músicas
 já tocadas aparecem no topo com "há X min", "ontem"...
+
+A versão nova também traz o submenu **Pastas de músicas ▸** no tray: no
+`overdrive` ele mostra as raízes cadastradas sozinho (ver "Tray" no
+`CLAUDE.md`).
+
+## 3. A pasta WorkVault foi renomeada
+
+Em 2026-10-16 a pasta compartilhada passou de `Músicas WorkVault` para
+**`Músicas - WorkVault`** (com hífen), e o nome antigo não existe mais. A raiz
+`workvault` do banco ainda aponta para o caminho antigo, então o scanner a
+**pula** (sem marcar nada como sumido, nada se perde) e ela aparece como
+"pasta não encontrada" no web.
+
+O usuário resolve no web (Biblioteca → `workvault` → **Trocar pasta**), com
+o caminho novo no `overdrive` (algo como
+`C:\Users\Gills87\Meu Drive\...\Músicas - WorkVault`; confira com
+`Test-Path`). Depois, **Reescanear**: a música dela deve aparecer como mantida
+(mesmo caminho relativo), não como nova.

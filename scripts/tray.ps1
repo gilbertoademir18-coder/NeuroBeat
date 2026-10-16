@@ -388,6 +388,9 @@ $itemAbrir.Font = New-Object System.Drawing.Font($menu.Font, [System.Drawing.Fon
 $itemCelular = $menu.Items.Add("Copiar link do tailnet")
 $itemCode = $menu.Items.Add("Abrir no VS Code")
 $itemPasta = $menu.Items.Add("Abrir a pasta do projeto")
+# Submenu montado a cada abertura do menu (ver Montar-Pastas-De-Musicas).
+$itemPastasMusicas = New-Object System.Windows.Forms.ToolStripMenuItem("Pastas de músicas")
+$menu.Items.Add($itemPastasMusicas) | Out-Null
 $menu.Items.Add("-") | Out-Null
 $itemEscanear = $menu.Items.Add("Reescanear biblioteca")
 $menu.Items.Add("-") | Out-Null
@@ -497,6 +500,91 @@ $itemPasta.add_Click({
     Start-Process explorer.exe -ArgumentList "`"$RAIZ`""
 })
 
+# ---------------------------------------------------------------------------
+# Pastas de músicas
+# ---------------------------------------------------------------------------
+
+<#
+    Os caminhos das pastas mudam de máquina para máquina (o Drive do notebook
+    é em streaming, com outro caminho; o do PC de casa, espelhado). Por isso a
+    lista é desta máquina, de duas fontes:
+
+    1. As raízes cadastradas no NeuroBeat cuja pasta existe AQUI. No PC de
+       casa, onde elas foram cadastradas, aparecem todas sem configurar nada.
+    2. O pastas-de-musicas.txt da raiz do projeto (fora do git), uma pasta
+       por linha no formato Nome=Caminho, para o que só esta máquina tem.
+
+    Mesmo caminho nas duas fontes aparece uma vez só.
+#>
+$ARQUIVO_PASTAS = Join-Path $RAIZ "pastas-de-musicas.txt"
+$MODELO_PASTAS = @"
+# Pastas de músicas deste computador, para o menu do ícone da bandeja.
+# Uma por linha: Nome=Caminho. Linhas com # são ignoradas.
+# As raízes cadastradas no NeuroBeat que existem neste computador já aparecem
+# sozinhas; aqui vai o que só existe nesta máquina (ou com outro caminho).
+#
+# Exemplo:
+# WorkVault=C:\Users\gilbe\Meu Drive\Músicas - WorkVault
+"@
+
+function Ler-Pastas-De-Musicas {
+    $pastas = New-Object System.Collections.ArrayList
+    $vistos = @{}
+    # As raízes vêm da API, que roda nesta máquina: o "existe" dela é daqui.
+    # Prazo curto, porque isto roda ao abrir o menu.
+    if ($script:estado -eq "no-ar") {
+        try {
+            foreach ($r in (Invoke-RestMethod -Uri "$URL/api/raizes" -TimeoutSec 2)) {
+                if ($r.existe -and -not $vistos.ContainsKey($r.caminho.ToLower())) {
+                    $vistos[$r.caminho.ToLower()] = $true
+                    [void]$pastas.Add([pscustomobject]@{ Nome = $r.alias; Caminho = $r.caminho })
+                }
+            }
+        } catch { }
+    }
+    if (Test-Path -LiteralPath $ARQUIVO_PASTAS) {
+        foreach ($linha in (Get-Content -LiteralPath $ARQUIVO_PASTAS -Encoding UTF8)) {
+            $linha = $linha.Trim()
+            if (-not $linha -or $linha.StartsWith("#")) { continue }
+            $i = $linha.IndexOf("=")
+            if ($i -lt 1) { continue }
+            $caminho = $linha.Substring($i + 1).Trim().Trim('"')
+            if ($vistos.ContainsKey($caminho.ToLower())) { continue }
+            $vistos[$caminho.ToLower()] = $true
+            [void]$pastas.Add([pscustomobject]@{ Nome = $linha.Substring(0, $i).Trim(); Caminho = $caminho })
+        }
+    }
+    return $pastas
+}
+
+function Montar-Pastas-De-Musicas {
+    $itemPastasMusicas.DropDownItems.Clear()
+    foreach ($p in (Ler-Pastas-De-Musicas)) {
+        $existe = Test-Path -LiteralPath $p.Caminho
+        $item = $itemPastasMusicas.DropDownItems.Add($(if ($existe) { $p.Nome } else { "$($p.Nome) (não encontrada)" }))
+        $item.ToolTipText = $p.Caminho
+        $item.Tag = $p.Caminho
+        $item.Enabled = $existe
+        # $this é o item clicado; o Tag guarda o caminho dele. (Um $p capturado
+        # aqui seria o da última volta do laço, para todos os itens.)
+        $item.add_Click({ Start-Process explorer.exe -ArgumentList "`"$($this.Tag)`"" })
+    }
+    if ($itemPastasMusicas.DropDownItems.Count -eq 0) {
+        $vazio = $itemPastasMusicas.DropDownItems.Add("Nenhuma pasta nesta máquina")
+        $vazio.Enabled = $false
+    }
+    $itemPastasMusicas.DropDownItems.Add("-") | Out-Null
+    $editar = $itemPastasMusicas.DropDownItems.Add("Editar a lista desta máquina...")
+    $editar.add_Click({
+        if (-not (Test-Path -LiteralPath $ARQUIVO_PASTAS)) {
+            # UTF-8 com BOM: o Bloco de Notas e o Get-Content -Encoding UTF8
+            # leem os acentos certos dos dois jeitos, e o BOM tira a dúvida.
+            [System.IO.File]::WriteAllText($ARQUIVO_PASTAS, $MODELO_PASTAS + "`r`n", (New-Object System.Text.UTF8Encoding($true)))
+        }
+        Start-Process notepad.exe -ArgumentList "`"$ARQUIVO_PASTAS`""
+    })
+}
+
 <#
     Publicar = conferir antes, reiniciar depois. As conferências rodam numa
     janela visível com o servidor antigo ainda no ar; o reinício acontece no
@@ -559,10 +647,12 @@ $itemStartup.add_Click({
     $itemStartup.Checked = Inicio-Automatico-Ligado
 })
 
-# Pasta Inicializar e VS Code podem mudar por fora — relidos a cada abertura.
+# Pasta Inicializar, VS Code e as pastas de músicas podem mudar por fora —
+# relidos a cada abertura.
 $menu.add_Opening({
     $itemStartup.Checked = Inicio-Automatico-Ligado
     $itemCode.Enabled = [bool](Achar-VsCode)
+    Montar-Pastas-De-Musicas
 })
 
 $itemLog.add_Click({
