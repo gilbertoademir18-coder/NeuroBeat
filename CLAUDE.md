@@ -6,13 +6,6 @@
 - Use linguagem natural, como um colega de equipe.
 - Seja proativo ao sugerir melhorias.
 
-# ⚠️ Pendente: migração para o `overdrive`
-
-Se esta sessão está no **PC de casa (`overdrive`)** e o NeuroBeat ainda não
-roda aqui, siga `docs/migracao-para-o-overdrive.md` antes de qualquer outra
-coisa. Ele leva banco, servidor, tray e tailnet do notebook para cá. (Remova
-este aviso quando a migração estiver feita.)
-
 # Como trabalhar neste projeto
 
 - **Toda decisão de projeto vai para este arquivo.** Se combinamos algo na
@@ -324,9 +317,20 @@ mão.
 
 O banco `neurobeat` mora no PostgreSQL 17 do **`overdrive`** desde
 2026-10-15 (`docs/migracao-para-o-overdrive.md`). Começou do zero: o banco do
-notebook só tinha testes e o backup não foi restaurado. Para desenvolver no
-notebook, o `.env` de lá passa a apontar para `100.65.76.22` (passo 8 da
-migração).
+notebook só tinha testes e o backup não foi restaurado.
+
+**No notebook** (passo 8, feito em 2026-10-16): o `.env` aponta para
+`100.65.76.22` (mesma senha do `.env` do `overdrive`), com a linha do banco
+local comentada como plano B. O notebook não é mais servidor: sem
+`tailscale serve` na 8447, sem atalho de Iniciar com o Windows, e o tray dele
+não fica ligado.
+
+- **O `npm run dev` do notebook mexe nos dados reais.** Valem as regras de
+  "os dados são do usuário" com mais cuidado ainda.
+- **Reescanear a partir do notebook é inofensivo:** as raízes apontam para
+  `C:\Users\Gills87\Meu Drive\...`, que só existe no `overdrive`, e o scanner
+  pula raiz sem pasta sem marcar nada como sumido. Escanear de verdade, só no
+  `overdrive` (tray de lá).
 
 ## Riscos a conferir
 
@@ -346,7 +350,7 @@ migração).
 1. [x] Decisões registradas neste arquivo.
 2. [x] **Teste mínimo no celular:** `apps/android` com Media3 tocando uma pasta do Autosync, tela bloqueada, loop. Instalado no G75. **Passou em 2026-10-15**: tocou com a tela bloqueada e com outros apps por cima.
 3. [x] Esqueleto do monorepo (workspaces, `.gitignore`, `.env.example`, shared, api e web mínimos).
-4. [ ] Infra do padrão. **Feito:** `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone. **Falta:** criar o banco (`criar-banco.ps1`, primeiro no notebook), migração inicial e, no `overdrive`, `publicar-no-tailnet.ps1` e liberar o banco no tailnet.
+4. [x] Infra do padrão: `.cmd`, `.code-workspace`, tray e scripts copiados do Trimly (o `.cmd` do Creativa, pelo fallback do fnm), ícone, banco e tailnet no `overdrive` (migração concluída em 2026-10-16, com o passo 8 no notebook).
 5. [x] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. Playlists (`/api/playlists`: listar, criar, renomear, loop, excluir e `PUT /:id/itens` com a lista inteira na ordem nova, numa transação). `GET /api/sync`.
 6. [x] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). Editor de playlists (arrastar com o `useArrastavel` do Trimly, ↑↓, ×, loop, busca para adicionar; cada mudança salva sozinha). **Falta:** nada para a primeira versão.
 7. [x] Android. impressão digital no aparelho (com cache), sync ao abrir e por botão, abas Playlists e Pastas, ajuste de servidor. **Conferido em 2026-10-15:** as 54 músicas do servidor acharam o arquivo entre os 957 indexados no G75 (impressões idênticas às do PC).

@@ -5,7 +5,7 @@
 > raízes foram cadastradas com "Adicionar pasta", não "Trocar pasta". Raízes
 > no `overdrive`: `musicas` (809), `audios` (142) e `workvault` (1), todas em
 > `C:\Users\Gills87\Meu Drive\`. Tailnet:
-> `https://overdrive.tail2c882a.ts.net:8447`. Falta o passo 8 (no notebook).
+> `https://overdrive.tail2c882a.ts.net:8447`. **Passo 8 feito no notebook em 2026-10-16:** `.env` apontando para `100.65.76.22` (`migrate status` em dia, 952 músicas lidas), `tailscale serve` da 8447 desligado e atalho de Iniciar com o Windows removido. **Migração concluída.**
 
 Roteiro para levar o NeuroBeat do notebook (`dev`) para o PC de casa
 (`overdrive`), onde ele vai morar de vez: banco, servidor de produção, tray e
