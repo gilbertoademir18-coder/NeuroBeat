@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -66,6 +68,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
@@ -574,6 +577,12 @@ private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit
 }
 
 
+/** 83_000 → "1:23"; com hora, "1:02:03". */
+private fun tempo(ms: Long): String {
+    val s = ms / 1000
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
+
 @Composable
 private fun NowPlaying(controller: MediaController?, capa: ImageBitmap?) {
     var title by remember { mutableStateOf("") }
@@ -595,6 +604,20 @@ private fun NowPlaying(controller: MediaController?, capa: ImageBitmap?) {
         c?.addListener(listener)
         onDispose { c?.removeListener(listener) }
     }
+    // A posição não gera evento do player enquanto anda: é lida a cada meio
+    // segundo, e só enquanto toca (parado, basta ler uma vez).
+    var posicao by remember { mutableStateOf(0L) }
+    var duracao by remember { mutableStateOf(0L) }
+    LaunchedEffect(controller, playing, title) {
+        val c = controller ?: return@LaunchedEffect
+        do {
+            posicao = c.currentPosition
+            duracao = c.duration.takeIf { it > 0 } ?: 0L
+            delay(500)
+        } while (playing)
+    }
+    // Enquanto o dedo arrasta, a barra segue o dedo; o salto só acontece ao soltar.
+    var arrastando by remember { mutableStateOf<Float?>(null) }
     if (controller == null || title.isEmpty()) return
     // O fundo vai até a borda (por trás da barra de navegação), mas os botões
     // ficam acima dela: a bottomBar do Scaffold não desconta os insets sozinha.
@@ -626,6 +649,30 @@ private fun NowPlaying(controller: MediaController?, capa: ImageBitmap?) {
                         )
                     }
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                }
+            }
+            if (duracao > 0) {
+                val fracao = arrastando ?: (posicao.toFloat() / duracao).coerceIn(0f, 1f)
+                Slider(
+                    value = fracao,
+                    onValueChange = { arrastando = it },
+                    onValueChangeFinished = {
+                        arrastando?.let { f ->
+                            posicao = (f * duracao).toLong()
+                            controller.seekTo(posicao)
+                        }
+                        arrastando = null
+                    },
+                    modifier = Modifier.fillMaxWidth().height(28.dp),
+                )
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        tempo(arrastando?.let { (it * duracao).toLong() } ?: posicao),
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(tempo(duracao), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
