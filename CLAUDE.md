@@ -163,6 +163,11 @@ não precisa varrer pastas; consulta o MediaStore por `RELATIVE_PATH`.
 - **A URI não atravessa do controller para a sessão.** Ela vai no
   `requestMetadata.mediaUri` e o `onAddMediaItems` do `PlaybackService` a
   repõe.
+- **Tocar no cartão do player não abria o app.** O cartão de mídia (cortina
+  de notificações, tela de bloqueio) abre o que a `MediaSession` informar em
+  `setSessionActivity`. Sem isso, o toque não faz nada. O `PlaybackService`
+  passa um `PendingIntent` para a `MainActivity` com `SINGLE_TOP` (junto do
+  `launchMode="singleTop"` do manifesto, volta para a tela que já existe).
 - **Edge-to-edge (Android 15+):** o app desenha por trás das barras do
   sistema. O `Scaffold` desconta os insets do conteúdo, mas **não** os da
   `bottomBar`: ela precisa de `navigationBarsPadding()`, senão a barra de

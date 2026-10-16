@@ -1,5 +1,6 @@
 package com.gills87.neurobeat
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -39,7 +40,10 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
-        session = MediaSession.Builder(this, player).setCallback(SessionCallback).build()
+        session = MediaSession.Builder(this, player)
+            .setCallback(SessionCallback)
+            .setSessionActivity(abrirOApp())
+            .build()
         player.addListener(contador)
         val prefs = preferencias(this)
         // O loop é global: vale para qualquer fila (trocar de playlist, pasta
@@ -108,6 +112,19 @@ class PlaybackService : MediaSessionService() {
             .build()
         session?.player?.let { (it as ExoPlayer).setAudioAttributes(atributos, /* handleAudioFocus = */ !tocarJunto(prefs)) }
     }
+
+    /**
+     * O que abre ao tocar no cartão do player (na cortina de notificações e na
+     * tela de bloqueio). Sem isto o toque não faz nada. O `singleTop` do
+     * manifesto + `SINGLE_TOP` aqui trazem de volta a tela que já existe, em
+     * vez de abrir outra por cima.
+     */
+    private fun abrirOApp(): PendingIntent = PendingIntent.getActivity(
+        this,
+        0,
+        Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     // O Media3 põe um ícone genérico de nota musical na notificação; aqui vai
     // a linha de batimento do NeuroBeat.
