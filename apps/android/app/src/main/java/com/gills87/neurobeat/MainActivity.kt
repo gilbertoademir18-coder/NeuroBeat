@@ -31,6 +31,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -330,7 +335,7 @@ private fun Conteudo(lista: Lista, voltar: () -> Unit, tocarTudo: () -> Unit, to
             onClick = tocarTudo,
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             enabled = noAparelho > 0,
-        ) { Text("▶  Tocar tudo") }
+        ) { IconeTocar(); Text("Tocar tudo") }
         HorizontalDivider()
         LazyColumn(Modifier.fillMaxSize()) {
             itemsIndexed(lista.faixas) { i, f ->
@@ -483,7 +488,7 @@ private fun MaisTocadas(porImpressao: Map<String, ArquivoLocal>, pacote: Pacote?
         Button(
             onClick = { tocar(lista.map { midia(it.first) }, "Mais tocadas") },
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        ) { Text("▶  Tocar as mais tocadas") }
+        ) { IconeTocar(); Text("Tocar as mais tocadas") }
         HorizontalDivider()
         LazyColumn(Modifier.fillMaxSize()) {
             itemsIndexed(lista, key = { _, (a, _) -> a.id }) { i, (a, vezes) ->
@@ -631,6 +636,12 @@ private fun Busca(arquivos: List<ArquivoLocal>, pacote: Pacote?, tocar: (List<Me
 }
 
 
+/** O ▶ dos botões "Tocar tudo": em vetor, porque o caractere vira emoji laranja. */
+@Composable
+private fun IconeTocar() {
+    Icon(painterResource(R.drawable.ic_tocar), null, Modifier.padding(end = 8.dp).size(18.dp))
+}
+
 /** 83_000 → "1:23"; com hora, "1:02:03". */
 private fun tempo(ms: Long): String {
     val s = ms / 1000
@@ -729,15 +740,36 @@ private fun NowPlaying(controller: MediaController?, capa: ImageBitmap?) {
                     Text(tempo(duracao), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { controller.seekToPrevious() }) { Text("⏮") }
-                TextButton(onClick = { if (playing) controller.pause() else controller.play() }) {
-                    Text(if (playing) "⏸" else "▶")
+            // Ícones em vetor (res/drawable/ic_*.xml), e não caracteres: o
+            // Android desenha ⏸ ▶ 🔁 como emoji colorido (quadrado laranja),
+            // ignorando a cor do tema.
+            Box(Modifier.fillMaxWidth()) {
+                Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { controller.seekToPrevious() }) {
+                        Icon(painterResource(R.drawable.ic_anterior), "Faixa anterior")
+                    }
+                    FilledIconButton(
+                        onClick = { if (playing) controller.pause() else controller.play() },
+                        Modifier.padding(horizontal = 12.dp).size(52.dp),
+                    ) {
+                        Icon(
+                            painterResource(if (playing) R.drawable.ic_pausar else R.drawable.ic_tocar),
+                            if (playing) "Pausar" else "Tocar",
+                            Modifier.size(30.dp),
+                        )
+                    }
+                    IconButton(onClick = { controller.seekToNext() }) {
+                        Icon(painterResource(R.drawable.ic_proxima), "Próxima faixa")
+                    }
                 }
-                TextButton(onClick = { controller.seekToNext() }) { Text("⏭") }
-                TextButton(onClick = {
-                    controller.repeatMode = if (loop) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
-                }) { Text(if (loop) "🔁 loop ligado" else "loop desligado") }
+                // Liga/desliga: aceso (com fundo) quando o loop está ligado.
+                FilledTonalIconToggleButton(
+                    checked = loop,
+                    onCheckedChange = { controller.repeatMode = if (it) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF },
+                    Modifier.align(Alignment.CenterEnd),
+                ) {
+                    Icon(painterResource(R.drawable.ic_loop), if (loop) "Loop ligado" else "Loop desligado")
+                }
             }
         }
     }

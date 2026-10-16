@@ -169,6 +169,13 @@ não precisa varrer pastas; consulta o MediaStore por `RELATIVE_PATH`.
   `setSessionActivity`. Sem isso, o toque não faz nada. O `PlaybackService`
   passa um `PendingIntent` para a `MainActivity` com `SINGLE_TOP` (junto do
   `launchMode="singleTop"` do manifesto, volta para a tela que já existe).
+- **Símbolo em `Text` vira emoji.** `⏸ ▶ 🔁` (e outros com versão emoji)
+  são desenhados pelo Android como emoji colorido, com o quadrado laranja,
+  ignorando a cor do tema. Botão com símbolo usa **ícone em vetor**
+  (`res/drawable/ic_tocar`, `ic_pausar`, `ic_anterior`, `ic_proxima`,
+  `ic_loop`, desenhos dos ícones de mídia do Material) com `Icon(painterResource(...))`,
+  que pega a cor do tema. Não adicionar `material-icons-extended`: é enorme
+  e, sem R8, incharia o APK.
 - **Edge-to-edge (Android 15+):** o app desenha por trás das barras do
   sistema. O `Scaffold` desconta os insets do conteúdo, mas **não** os da
   `bottomBar`: ela precisa de `navigationBarsPadding()`, senão a barra de
