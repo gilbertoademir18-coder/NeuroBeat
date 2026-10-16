@@ -54,9 +54,6 @@ export function Playlists() {
             >
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{p.nome}</span>
-                {p.loop && (
-                  <span className="rounded-full bg-destaque-suave px-2 py-0.5 text-xs text-destaque">loop</span>
-                )}
               </div>
               <p className="mt-1 text-sm text-tinta-2 tabular">
                 {p.faixas} {p.faixas === 1 ? "faixa" : "faixas"} · {duracao(p.duracaoMs)}

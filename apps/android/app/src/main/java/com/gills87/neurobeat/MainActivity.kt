@@ -129,7 +129,12 @@ private fun item(uri: Uri, id: String, titulo: String, artista: String?, impress
 /** Chave do "de onde veio" nos extras da faixa: "Playlist: CTRL", "Pasta: Naruto", "Música". */
 private const val ORIGEM = "origem"
 
-private fun tocar(controller: MediaController?, itens: List<MediaItem>, loop: Boolean, origem: String) {
+/**
+ * Troca a fila e toca. Não mexe no loop: ele é global (o botão do player,
+ * guardado pelo PlaybackService) e continua como estava, venha a faixa de uma
+ * playlist, de uma pasta ou da busca.
+ */
+private fun tocar(controller: MediaController?, itens: List<MediaItem>, origem: String) {
     val c = controller ?: return
     if (itens.isEmpty()) return
     // A origem vai na própria faixa, que mora no serviço: reabrir o app com a
@@ -145,7 +150,6 @@ private fun tocar(controller: MediaController?, itens: List<MediaItem>, loop: Bo
             .build()
     }
     c.setMediaItems(marcados, 0, 0L)
-    c.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
     c.prepare()
     c.play()
 }
@@ -272,8 +276,8 @@ private fun App(controller: MediaController?) {
                     when (aba) {
                         0 -> Playlists(pacote, porImpressao, abrir)
                         1 -> Pastas(lista, abrir)
-                        2 -> Busca(lista) { itens -> tocar(controller, itens, loop = false, origem = "Música") }
-                        else -> MaisTocadas(porImpressao, pacote) { itens, origem -> tocar(controller, itens, loop = false, origem) }
+                        2 -> Busca(lista) { itens -> tocar(controller, itens, origem = "Música") }
+                        else -> MaisTocadas(porImpressao, pacote) { itens, origem -> tocar(controller, itens, origem) }
                     }
                 }
                 aberta?.let { l ->
@@ -283,7 +287,7 @@ private fun App(controller: MediaController?) {
                             l,
                             voltar = { aberta = null },
                             tocarTudo = { tocarTudo(controller, l) },
-                            tocarUma = { tocar(controller, listOf(it), loop = false, origem = "Música") },
+                            tocarUma = { tocar(controller, listOf(it), origem = "Música") },
                         )
                     }
                 }
@@ -293,13 +297,13 @@ private fun App(controller: MediaController?) {
 }
 
 private fun tocarTudo(controller: MediaController?, lista: Lista) =
-    tocar(controller, lista.faixas.mapNotNull { it.midia }, lista.loop, origem = "${lista.tipo}: ${lista.titulo}")
+    tocar(controller, lista.faixas.mapNotNull { it.midia }, origem = "${lista.tipo}: ${lista.titulo}")
 
 /** Uma faixa da página de conteúdo. Sem `midia`, o arquivo não está no aparelho. */
 private data class Faixa(val titulo: String, val detalhe: String?, val midia: MediaItem?)
 
 /** O que a página mostra: uma playlist ou uma pasta, já resolvida em faixas. */
-private data class Lista(val tipo: String, val titulo: String, val loop: Boolean, val faixas: List<Faixa>)
+private data class Lista(val tipo: String, val titulo: String, val faixas: List<Faixa>)
 
 @Composable
 private fun Conteudo(lista: Lista, voltar: () -> Unit, tocarTudo: () -> Unit, tocarUma: (MediaItem) -> Unit) {
@@ -314,7 +318,6 @@ private fun Conteudo(lista: Lista, voltar: () -> Unit, tocarTudo: () -> Unit, to
                     buildString {
                         append("${lista.faixas.size} faixas")
                         if (noAparelho < lista.faixas.size) append(" · ${lista.faixas.size - noAparelho} não estão no aparelho")
-                        if (lista.loop) append(" · 🔁")
                     },
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -387,10 +390,10 @@ private fun Playlists(pacote: Pacote?, porImpressao: Map<String, ArquivoLocal>, 
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { abrir(Lista("Playlist", p.nome, p.loop, faixas)) }
+                    .clickable { abrir(Lista("Playlist", p.nome, faixas)) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                Text(p.nome + if (p.loop) "  🔁" else "", style = MaterialTheme.typography.titleMedium)
+                Text(p.nome, style = MaterialTheme.typography.titleMedium)
                 Text(
                     buildString {
                         append("${p.musicaIds.size} faixas")
@@ -439,8 +442,7 @@ private fun Pastas(arquivos: List<ArquivoLocal>, abrir: (Lista) -> Unit) {
                     .fillMaxWidth()
                     .clickable {
                         val faixas = lista.map { Faixa(it.nome, null, item(it.uri, "a${it.id}", it.nome, pasta.ifEmpty { null }, it.impressao)) }
-                        // Pasta toca em loop, como antes de existir a página.
-                        abrir(Lista("Pasta", pasta.ifEmpty { "(soltas na raiz)" }, loop = true, faixas))
+                        abrir(Lista("Pasta", pasta.ifEmpty { "(soltas na raiz)" }, faixas))
                     }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {

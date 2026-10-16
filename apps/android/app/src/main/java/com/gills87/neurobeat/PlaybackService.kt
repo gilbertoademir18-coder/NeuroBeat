@@ -42,6 +42,15 @@ class PlaybackService : MediaSessionService() {
         session = MediaSession.Builder(this, player).setCallback(SessionCallback).build()
         player.addListener(contador)
         val prefs = preferencias(this)
+        // O loop é global: vale para qualquer fila (trocar de playlist, pasta
+        // ou música não mexe nele) e sobrevive a fechar o app. O botão do
+        // player muda o repeatMode, e o listener abaixo guarda.
+        player.repeatMode = if (prefs.getBoolean(LOOP, false)) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+        player.addListener(object : Player.Listener {
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                preferencias(this@PlaybackService).edit().putBoolean(LOOP, repeatMode != Player.REPEAT_MODE_OFF).apply()
+            }
+        })
         aplicarFoco(prefs)
         prefs.registerOnSharedPreferenceChangeListener(aoMudarPreferencia)
         usarIconeDaMarcaNaNotificacao()
@@ -132,6 +141,9 @@ class PlaybackService : MediaSessionService() {
     companion object {
         /** Preferência compartilhada entre a tela (que muda) e o serviço (que aplica). */
         const val TOCAR_JUNTO = "tocarJunto"
+
+        /** O loop global, ligado ou não. Só o serviço lê e grava. */
+        const val LOOP = "loop"
 
         /** Chave da impressão digital nos extras da faixa, para contar as tocadas. */
         const val IMPRESSAO = "impressao"

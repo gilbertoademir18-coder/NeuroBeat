@@ -99,6 +99,7 @@ export interface MusicaDto {
 export interface PlaylistResumoDto {
   id: number;
   nome: string;
+  /** Sem uso desde 2026-10-16: o loop é global, do botão do player no app. */
   loop: boolean;
   faixas: number;
   /** Soma das faixas com duração conhecida. */
@@ -110,6 +111,7 @@ export interface PlaylistResumoDto {
 export interface PlaylistDto {
   id: number;
   nome: string;
+  /** Sem uso desde 2026-10-16: o loop é global, do botão do player no app. */
   loop: boolean;
   /** Na ordem de tocar. A mesma música pode aparecer mais de uma vez. */
   itens: { id: number; musica: MusicaDto }[];
@@ -147,6 +149,7 @@ export interface SyncDto {
   playlists: {
     id: number;
     nome: string;
+    /** Sem uso desde 2026-10-16: o loop é global, do botão do player no app. */
     loop: boolean;
     /** Na ordem de tocar; pode repetir. */
     musicaIds: number[];

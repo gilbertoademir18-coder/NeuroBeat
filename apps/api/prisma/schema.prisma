@@ -63,7 +63,8 @@ model Musica {
 model Playlist {
   id           Int            @id @default(autoincrement())
   nome         String
-  /// No fim da última faixa, volta para a primeira.
+  /// Sem uso desde 2026-10-16: o loop é global, do botão do player no app.
+  /// A coluna fica para não perder o que estava marcado.
   loop         Boolean        @default(false)
   criadaEm     DateTime       @default(now()) @map("criada_em")
   atualizadaEm DateTime       @updatedAt @map("atualizada_em")

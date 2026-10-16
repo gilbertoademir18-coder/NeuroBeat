@@ -86,7 +86,7 @@ export function Playlist() {
     aoLargar: () => void salvarItens(linhasRef.current),
   });
 
-  async function alterar(dados: { nome?: string; loop?: boolean }) {
+  async function alterar(dados: { nome: string }) {
     try {
       setPlaylist(await api<PlaylistDto>(`/playlists/${id}`, { method: "PATCH", corpo: dados }));
       setErro(null);
@@ -131,20 +131,12 @@ export function Playlist() {
             aria-label="Nome da playlist"
             className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-xl font-semibold hover:border-borda focus:border-borda"
           />
-          <label className="flex cursor-pointer items-center gap-2 select-none">
-            <input
-              type="checkbox"
-              checked={playlist.loop}
-              onChange={(e) => void alterar({ loop: e.target.checked })}
-              className="size-4 accent-[var(--destaque)]"
-            />
-            Loop
-          </label>
+          {/* Sem caixa de loop: o loop é global, do botão do player no app
+              (decisão de 2026-10-16). A coluna `loop` segue no banco, sem uso. */}
         </div>
         <p className="mt-1 px-2 text-sm text-tinta-2 tabular">
           {linhas.length} {linhas.length === 1 ? "faixa" : "faixas"} · {duracao(total)}
           {salvando && " · salvando…"}
-          {playlist.loop && " · volta para a primeira no fim"}
         </p>
 
         {linhas.length === 0 ? (

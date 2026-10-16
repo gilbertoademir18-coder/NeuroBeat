@@ -114,6 +114,27 @@ com fundo em degradê, a linha de batimento na frente e a mesma linha como
 player usa `ic_notificacao.xml` (a mesma linha, em 24 dp). Mudou a marca no
 SVG, recalcule os dois.
 
+**Assinatura: uma chave do NeuroBeat nas duas máquinas.** O Android só
+atualiza um app com a mesma assinatura, e a chave de debug é por máquina: um
+APK do `overdrive` não atualizava o instalado pelo notebook (e vice-versa),
+e desinstalar apaga os dados do app (cache, sync e **tocadas pendentes**).
+Desde 2026-10-16 debug e release são assinados com a chave do projeto, que
+fica **fora do git** em `%USERPROFILE%\.android\` de cada máquina:
+
+- `neurobeat.jks` (PKCS12, alias `neurobeat`, SHA-256 do certificado
+  `01:40:9D:83:…:D7:60:EA`)
+- `neurobeat-assinatura.properties` (`arquivo=`, `alias=`, `senha=`)
+
+O `app/build.gradle.kts` lê os dois; sem eles, cai na chave de debug da
+máquina e avisa no build. **No `overdrive`:** os dois arquivos foram
+enviados por Taildrop e chegam em **Downloads**; mova-os para
+`%USERPROFILE%\.android\`. Se o celular recusar uma instalação com
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`, é assinatura diferente: antes de
+desinstalar, confira que `files/tocadas-pendentes.json` está vazio
+(`adb exec-out run-as com.gills87.neurobeat cat files/tocadas-pendentes.json`).
+Perder a chave não é grave (é só desinstalar uma vez), mas vale guardar uma
+cópia junto das senhas do usuário.
+
 Ciclo de desenvolvimento, de dentro de `apps/android`:
 
 ```powershell
@@ -270,8 +291,14 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
 - **Quem edita é o web.** O celular só lê a biblioteca e as playlists, e por
   isso não há conflitos de sincronização. A única escrita do celular são as
   tocadas, que só acrescentam registros.
-- Playlist: nome, itens ordenados e `loop`. Com o loop ligado, o player usa
-  `REPEAT_MODE_ALL`. Shuffle fica para depois.
+- **O loop é global, do botão do player** (decisão de 2026-10-16). Ligado,
+  ele continua ligado ao trocar de música, pasta ou playlist, e é lembrado
+  ao fechar o app. Quem guarda é o `PlaybackService` (preferência `loop`,
+  aplicada no `onCreate` e gravada no `onRepeatModeChanged`); o `tocar()` da
+  tela **não mexe** no `repeatMode`. O loop por playlist saiu: a caixa sumiu
+  do web e o 🔁 do app. A coluna `loop` e o campo no sync ficam, sem uso,
+  para não perder dados nem quebrar versões antigas do app.
+- Playlist: nome e itens ordenados. Shuffle fica para depois.
 
 ## Padrão de projeto aplicado
 
@@ -354,4 +381,4 @@ não fica ligado.
 5. [x] API. **Feito:** schema e migração inicial, scanner com impressão digital, rotas de raízes, músicas e `POST /api/biblioteca/escanear`. Playlists (`/api/playlists`: listar, criar, renomear, loop, excluir e `PUT /:id/itens` com a lista inteira na ordem nova, numa transação). `GET /api/sync`.
 6. [x] Web. **Feito:** tela de biblioteca (pastas, trocar caminho, reescanear, lista com busca e filtro). Editor de playlists (arrastar com o `useArrastavel` do Trimly, ↑↓, ×, loop, busca para adicionar; cada mudança salva sozinha). **Falta:** nada para a primeira versão.
 7. [x] Android. impressão digital no aparelho (com cache), sync ao abrir e por botão, abas Playlists e Pastas, ajuste de servidor. **Conferido em 2026-10-15:** as 54 músicas do servidor acharam o arquivo entre os 957 indexados no G75 (impressões idênticas às do PC).
-8. [ ] APK de release instalado no Moto G75.
+8. [ ] APK de release instalado no Moto G75. **Feito:** chave única do projeto, release assinado com ela (`.\gradlew.bat assembleRelease`). **Falta:** instalar o release no lugar do debug (perde o `run-as`, que só funciona em debug).
