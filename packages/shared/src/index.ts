@@ -159,6 +159,12 @@ export interface SyncDto {
    * acrescentado depois: quem não conhece, ignora (por isso a versão não subiu).
    */
   tocadas: Record<string, number>;
+  /**
+   * A última vez que cada música tocou (ISO), por impressão digital. Ordena a
+   * busca do app com as mais recentes primeiro. Também acrescentado depois, do
+   * mesmo jeito que `tocadas`.
+   */
+  ultimasTocadas: Record<string, string>;
 }
 
 /** `POST /api/tocadas`: as tocadas que o celular ainda não tinha enviado. */

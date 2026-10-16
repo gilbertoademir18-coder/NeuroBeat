@@ -299,6 +299,15 @@ O contrato com a API é o JSON de `GET /api/sync`, documentado em
   do web e o 🔁 do app. A coluna `loop` e o campo no sync ficam, sem uso,
   para não perder dados nem quebrar versões antigas do app.
 - Playlist: nome e itens ordenados. Shuffle fica para depois.
+- **Aba Busca, sem nada digitado, mostra todas as músicas do aparelho**, as
+  tocadas por último primeiro (com "há 12 min", "ontem"...) e o resto em
+  ordem alfabética. Digitando, filtra mantendo a mesma ordem. A data vem do
+  campo `ultimasTocadas` do sync (o `max(tocadaEm)` por impressão),
+  misturada com a fila local de tocadas pendentes, e é recalculada ao entrar
+  na aba e a cada sync (não a cada tocada, para a lista não pular sob o dedo).
+- **Mudança na API só vale no celular depois de publicada no `overdrive`:**
+  lá, `git pull` e **Publicar a versão nova** no tray. O app sincroniza com o
+  servidor de casa, não com o `npm run dev` do notebook.
 
 ## Padrão de projeto aplicado
 

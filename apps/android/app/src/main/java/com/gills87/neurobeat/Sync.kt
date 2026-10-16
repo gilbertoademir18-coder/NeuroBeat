@@ -29,6 +29,8 @@ data class Pacote(
     val playlists: List<PlaylistSync>,
     /** Tocadas já registradas no servidor, por impressão. */
     val tocadas: Map<String, Int>,
+    /** A última vez que cada música tocou (ISO), por impressão. */
+    val ultimasTocadas: Map<String, String>,
 )
 
 object Sync {
@@ -93,7 +95,8 @@ object Sync {
         }
         // Campo acrescentado depois: uma cópia antiga guardada no aparelho não tem.
         val tocadas = json.optJSONObject("tocadas")?.let { o -> o.keys().asSequence().associateWith { o.getInt(it) } }.orEmpty()
-        return Pacote(json.getString("geradoEm"), musicas.associateBy { it.id }, playlists, tocadas)
+        val ultimas = json.optJSONObject("ultimasTocadas")?.let { o -> o.keys().asSequence().associateWith { o.getString(it) } }.orEmpty()
+        return Pacote(json.getString("geradoEm"), musicas.associateBy { it.id }, playlists, tocadas, ultimas)
     }
 
     /**

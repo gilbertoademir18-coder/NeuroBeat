@@ -18,7 +18,7 @@ export async function rotasSync(app: FastifyInstance) {
         orderBy: { nome: "asc" },
         include: { itens: { orderBy: { posicao: "asc" }, select: { musicaId: true } } },
       }),
-      prisma.tocada.groupBy({ by: ["impressao"], _count: { _all: true } }),
+      prisma.tocada.groupBy({ by: ["impressao"], _count: { _all: true }, _max: { tocadaEm: true } }),
     ]);
     return {
       versao: 1,
@@ -38,6 +38,9 @@ export async function rotasSync(app: FastifyInstance) {
         musicaIds: p.itens.map((i) => i.musicaId),
       })),
       tocadas: Object.fromEntries(tocadas.map((t) => [t.impressao, t._count._all])),
+      ultimasTocadas: Object.fromEntries(
+        tocadas.flatMap((t) => (t._max.tocadaEm ? [[t.impressao, t._max.tocadaEm.toISOString()]] : [])),
+      ),
     };
   });
 }

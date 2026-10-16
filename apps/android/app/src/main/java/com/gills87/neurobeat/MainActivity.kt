@@ -72,9 +72,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
+import java.time.Duration
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 class MainActivity : ComponentActivity() {
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -276,7 +279,7 @@ private fun App(controller: MediaController?) {
                     when (aba) {
                         0 -> Playlists(pacote, porImpressao, abrir)
                         1 -> Pastas(lista, abrir)
-                        2 -> Busca(lista) { itens -> tocar(controller, itens, origem = "Música") }
+                        2 -> Busca(lista, pacote) { itens -> tocar(controller, itens, origem = "Música") }
                         else -> MaisTocadas(porImpressao, pacote) { itens, origem -> tocar(controller, itens, origem) }
                     }
                 }
@@ -544,34 +547,83 @@ private fun CampoBusca(consulta: String, aoMudar: (String) -> Unit, rotulo: Stri
     )
 }
 
+/** Há quanto tempo: "agora", "há 12 min", "há 3 h", "ontem", "há 5 dias", "02/09". */
+private fun haQuanto(quando: Instant, agora: Instant = Instant.now()): String {
+    val minutos = Duration.between(quando, agora).toMinutes()
+    val dias = ChronoUnit.DAYS.between(
+        quando.atZone(ZoneId.systemDefault()).toLocalDate(),
+        agora.atZone(ZoneId.systemDefault()).toLocalDate(),
+    )
+    return when {
+        minutos < 1 -> "agora"
+        minutos < 60 -> "há $minutos min"
+        dias == 0L -> "há ${minutos / 60} h"
+        dias == 1L -> "ontem"
+        dias < 7 -> "há $dias dias"
+        else -> quando.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM"))
+    }
+}
+
+/**
+ * Todas as músicas do aparelho, as tocadas por último primeiro e o resto em
+ * ordem alfabética. Sem nada digitado, mostra a lista inteira (~950 linhas: a
+ * LazyColumn só desenha o que está na tela); digitando, filtra e mantém a
+ * mesma ordem, então o que se ouviu por último aparece no topo.
+ *
+ * A ordem é calculada ao entrar na aba e a cada sync, e não a cada tocada:
+ * reordenar a lista com o dedo em cima dela seria pior que esperar.
+ */
 @Composable
-private fun Busca(arquivos: List<ArquivoLocal>, tocar: (List<MediaItem>) -> Unit) {
+private fun Busca(arquivos: List<ArquivoLocal>, pacote: Pacote?, tocar: (List<MediaItem>) -> Unit) {
+    val context = LocalContext.current
     var consulta by remember { mutableStateOf("") }
+    var ultimas by remember { mutableStateOf<Map<String, Instant>>(emptyMap()) }
+    LaunchedEffect(pacote) {
+        ultimas = withContext(Dispatchers.IO) { Tocadas.ultimas(context, pacote?.ultimasTocadas.orEmpty()) }
+    }
+    val ordenados = remember(arquivos, ultimas) {
+        arquivos.sortedWith(
+            compareByDescending<ArquivoLocal> { ultimas[it.impressao] }
+                .thenBy { it.pasta.lowercase() }
+                .thenBy { it.nome.lowercase() },
+        )
+    }
     // Procura no nome e na pasta: "naruto" acha as faixas da pasta Naruto.
-    val chaves = remember(arquivos) { arquivos.map { semAcento("${it.pasta}/${it.nome}") } }
+    val chaves = remember(ordenados) { ordenados.map { semAcento("${it.pasta}/${it.nome}") } }
     val termos = remember(consulta) { termosDe(consulta) }
-    val achados = remember(arquivos, termos) {
-        if (termos.isEmpty()) emptyList()
-        else arquivos.filterIndexed { i, _ -> termos.all { chaves[i].contains(it) } }
+    val achados = remember(ordenados, termos) {
+        if (termos.isEmpty()) ordenados
+        else ordenados.filterIndexed { i, _ -> termos.all { chaves[i].contains(it) } }
     }
     CampoBusca(consulta, { consulta = it }, "Nome da música ou da pasta")
-    if (termos.isEmpty()) return
     Text(
-        "${achados.size} encontradas",
+        if (termos.isEmpty()) "${achados.size} músicas · as tocadas por último primeiro" else "${achados.size} encontradas",
         Modifier.padding(horizontal = 16.dp),
         style = MaterialTheme.typography.bodySmall,
     )
+    val agora = remember(ultimas) { Instant.now() }
     LazyColumn(Modifier.fillMaxSize()) {
         items(achados, key = { it.id }) { a ->
             val pasta = a.pasta.removePrefix("#MediaFlow - ")
-            Column(
+            Row(
                 Modifier
                     .fillMaxWidth()
                     .clickable { tocar(listOf(item(a.uri, "b${a.id}", a.nome, pasta, a.impressao))) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(a.nome, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(pasta, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.weight(1f)) {
+                    Text(a.nome, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(pasta, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                ultimas[a.impressao]?.let { quando ->
+                    Text(
+                        haQuanto(quando, agora),
+                        Modifier.padding(start = 12.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             HorizontalDivider()
         }

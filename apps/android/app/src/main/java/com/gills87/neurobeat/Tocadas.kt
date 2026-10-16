@@ -48,6 +48,21 @@ object Tocadas {
         return total
     }
 
+    /**
+     * A última vez que cada música tocou: a do servidor, ou a da fila local se
+     * for mais recente (o que se ouviu sem rede também conta).
+     */
+    fun ultimas(context: Context, doServidor: Map<String, String>): Map<String, Instant> {
+        val ultima = doServidor.mapNotNull { (impressao, iso) ->
+            runCatching { Instant.parse(iso) }.getOrNull()?.let { impressao to it }
+        }.toMap().toMutableMap()
+        pendentes(context).forEach { p ->
+            val quando = runCatching { Instant.parse(p.tocadaEm) }.getOrNull() ?: return@forEach
+            if (ultima[p.impressao]?.isBefore(quando) != false) ultima[p.impressao] = quando
+        }
+        return ultima
+    }
+
     private fun gravar(context: Context, lista: List<Pendente>) {
         val a = JSONArray()
         lista.forEach { a.put(JSONObject().put("id", it.id).put("impressao", it.impressao).put("tocadaEm", it.tocadaEm)) }
