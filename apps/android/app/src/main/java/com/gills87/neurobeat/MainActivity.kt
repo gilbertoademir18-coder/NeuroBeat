@@ -244,7 +244,6 @@ private fun App(controller: MediaController?) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                TextButton(onClick = { sincronizar() }, enabled = !sincronizando) { Text("Sincronizar") }
                 // O serviço escuta a preferência e troca o foco de áudio na hora.
                 FilterChip(
                     selected = tocarJunto,
@@ -254,6 +253,7 @@ private fun App(controller: MediaController?) {
                     },
                     label = { Text("Misturar áudio") },
                 )
+                TextButton(onClick = { sincronizar() }, enabled = !sincronizando) { Text("Sincronizar") }
             }
 
             // A página da playlist/pasta fica por cima das abas, que continuam
